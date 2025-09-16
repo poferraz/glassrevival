@@ -1,0 +1,237 @@
+Title
+Glass morphism web app rebuild with functional parity and no repository access plus explicit CSV parsing rules
+
+Role
+You are a full stack implementation partner. Recreate the app through discovery with complete functional parity and a consistent glass morphism layout. Work mobile first with iPhone sixteen Pro checks.
+
+Global constraints
+1 No repository access
+2 Never guess requirements or data models
+3 Ask targeted questions only when a fact is missing
+4 Preserve features, data flows, and integrations once confirmed
+5 Prioritize accessibility, responsiveness, and performance budgets
+6 Treat layout and styling as replaceable and enforce glass morphism
+
+How to work
+1 Operate in parts
+2 End each part with a Stop for approval marker
+3 Use concise prose and tables for specs
+4 Use code blocks only for commands or short snippets
+
+Part 0 Input data spec CSV
+This project will parse a single CSV file named TREINO SETEMBRO .csv. Use UTF8 and comma separated values. Accept both Windows and Unix line endings. Trim leading and trailing spaces. Normalize any typographic en dash in the Day column to a simple separator string in memory without altering original source text.
+
+CSV columns and semantics
+| Column name | Type | Required | Semantics | Normalization |
+| Day | string | yes | Human label for the training day such as Day 1 en dash Push | Keep original label, also store a machine friendly key created by lowercasing and replacing spaces with underscores |
+| Exercise | string | yes | Exercise display name | Trim, keep as given |
+| Sets | integer | yes | Count of sets | Coerce to integer, reject zero or negative |
+| Reps/Time | string | yes | Repetition or time prescription possibly with range or per side flags | Normalize into the fields described below |
+| Weight | number | no | Prescribed load if present | Coerce to number when provided, null when empty, store a weightUnit field later if the product needs unit control |
+| Notes | string | no | Coach or author notes | Preserve line breaks, trim surrounding whitespace |
+| Form Guidance | string | no | Specific form cues | Preserve text, trim surrounding whitespace |
+| Muscle Group | string | yes | Group or combo such as Chest plus Triceps | Keep as given and also store a slug version |
+| Main Muscle | string | yes | Primary target such as Upper Chest | Keep as given and also store a slug version |
+
+Target normalized fields produced from Reps or Time
+| Field | Type | Meaning |
+| unit | enum reps or seconds or steps | Canonical unit for the prescription |
+| repsMin | integer or null | Minimum reps when unit is reps |
+| repsMax | integer or null | Maximum reps when unit is reps |
+| timeSecondsMin | integer or null | Minimum time in seconds when unit is seconds |
+| timeSecondsMax | integer or null | Maximum time in seconds when unit is seconds |
+| stepsCount | integer or null | Count when unit is steps |
+| perSide | boolean | True when the prescription is per side or per leg |
+
+Parsing rules for Reps or Time
+1 Treat the cell as a free text token string
+2 Detect per side intent when any of these are present in a case insensitive way
+   a per side
+   b per leg
+   c slash side
+   d slash leg
+3 Convert any range that contains two numbers with any non digit characters between them into the canonical form A to B for parsing
+   a Do this with a regex that captures number then non digit then number
+   b Example pattern for conversion
+      s.replace(  capture number then non digit then number  ,  first number space to space second number  )
+4 Time in minutes
+   a If token contains a number followed by min then unit becomes seconds and both timeSecondsMin and timeSecondsMax equal number times sixty
+5 Time in seconds
+   a If token contains a range A to B followed by s then unit becomes seconds, set timeSecondsMin and timeSecondsMax to A and B
+   b If token contains a single number followed by s then unit becomes seconds and both timeSecondsMin and timeSecondsMax equal that number
+6 Steps
+   a If token contains a number followed by the word steps then unit becomes steps and stepsCount equals that number
+7 Reps
+   a If token contains a range A to B with no time unit then unit becomes reps and repsMin and repsMax equal A and B
+   b If token contains a single number with no time unit then unit becomes reps and repsMin and repsMax equal that number
+8 If none of the above apply then set unit to reps and leave numeric fields null, also flag for review in logs
+
+Suggested tiny parser in JavaScript free of repository context
+```js
+export function parsePrescription(raw) {
+  const out = { unit: "reps", repsMin: null, repsMax: null, timeSecondsMin: null, timeSecondsMax: null, stepsCount: null, perSide: false };
+  if (raw == null) return out;
+  let s = String(raw).trim().toLowerCase();
+  out.perSide = /(per\s*(side|leg)|\/side|\/leg)/i.test(s);
+  s = s.replace(/(\d+)\D+(\d+)/, "$1 to $2 ");
+  if (/\bmin\b/.test(s)) {
+    const m = s.match(/(\d+)\s*min/);
+    if (m) { out.unit = "seconds"; out.timeSecondsMin = Number(m[1]) * 60; out.timeSecondsMax = out.timeSecondsMin; return out; }
+  }
+  if (/\bsteps?\b/.test(s)) {
+    const m = s.match(/(\d+)\s*steps?/);
+    if (m) { out.unit = "steps"; out.stepsCount = Number(m[1]); return out; }
+  }
+  if (/\bs\b/.test(s)) {
+    const r = s.match(/(\d+)\s*to\s*(\d+)\s*s/);
+    if (r) { out.unit = "seconds"; out.timeSecondsMin = Number(r[1]); out.timeSecondsMax = Number(r[2]); return out; }
+    const m = s.match(/(\d+)\s*s/);
+    if (m) { out.unit = "seconds"; out.timeSecondsMin = Number(m[1]); out.timeSecondsMax = Number(m[1]); return out; }
+  }
+  const rr = s.match(/(\d+)\s*to\s*(\d+)/);
+  if (rr) { out.unit = "reps"; out.repsMin = Number(rr[1]); out.repsMax = Number(rr[2]); return out; }
+  const r1 = s.match(/^\s*(\d+)\s*$/);
+  if (r1) { out.unit = "reps"; out.repsMin = Number(r1[1]); out.repsMax = Number(r1[1]); return out; }
+  return out;
+}
+
+CSV ingestion rules
+Use Papa Parse in the browser with
+1 header true
+2 dynamicTyping for Sets and Weight
+3 skipEmptyLines true
+4 transformHeader to trim and preserve exact names
+5 On each row produce the normalized object
+6 Validate that Day Exercise and Sets are present and valid
+7 Collect an array of Day objects with nested exercises or build sessions later
+
+Acceptance checks for CSV ingestion
+1 Total rows equal the CSV row count excluding the header row
+2 All rows with valid Day Exercise and Sets are accepted
+3 All Reps or Time cells produce unit and numeric fields as per the rules
+4 A report is printed that counts each unit type and flags malformed tokens
+
+Part 1 Discovery and PDR assembly
+Goal
+Elicit the product definition and produce a Project Design Report
+
+Tasks
+1 Ask only the minimum questions required to fill A1 through A12
+2 Populate all tables including Feature inventory, Architecture overview, Data and API, UI and interaction model, Environment and configuration, Quality attributes, Tech debt and risks, Test coverage and gaps, Migration map, Open questions
+3 Include a short risk summary with mitigation ideas
+
+Deliverable
+A complete PDR in markdown. Stop for approval.
+
+Part 2 Target stack decision and scaffold
+Default to React with TypeScript and Vite with Tailwind and React Router and Vite PWA when no constraint is provided
+
+Tasks
+1 State chosen stack with reasons
+2 Generate scaffold commands
+3 Add scripts for dev build preview lint type check test
+4 Output a short readme with start and build commands
+
+Deliverable
+Chosen stack table and scaffold plan with commands. Stop for approval.
+
+Part 3 Design system for glass morphism
+Requirements
+1 Translucent panels with backdrop blur
+2 Soft elevation and rounded corners
+3 Subtle borders and high contrast text
+4 Mobile first spacing and type scale
+5 Respect reduced motion preference
+6 Visible focus outlines
+7 WCAG AA contrast
+
+Tasks
+1 Define tokens in a theme file
+2 Add Tailwind config hooks
+3 Provide recipes for Card Modal Button Input Nav bar Toast
+
+Deliverable
+Tokens list and component recipes with short snippets. Stop for approval.
+
+Part 4 Project structure plan
+Tasks
+1 Propose a tree with purpose notes
+2 Explain route naming and lazy loading strategy
+3 Define shared utilities for storage validation date id and notifications
+
+Deliverable
+Structure table and a compact tree. Stop for approval.
+
+Part 5 Data layer and persistence
+Rules
+1 If no backend exists use local storage with a versioned key and Zod validation
+2 If a backend exists keep the same language and framework unless the PDR flags a blocker
+3 Implement error handling patterns from the PDR
+
+Tasks
+1 Create Zod schemas that match the normalized fields including the CSV mapping above
+2 Implement storage adapters and a small migration helper
+3 Add mock data fixtures for local development
+4 Expose a function importCsv that returns normalized entities and an import report with acceptance counts
+
+Deliverable
+Schema snippets adapter signatures and a usage example. Stop for approval.
+
+Part 6 Layout shell and navigation
+Tasks
+1 Build the glass shell with safe area insets and a top bar or bottom bar per PDR
+2 Add a route announcer and a skip link
+3 Implement nav focus management and aria current
+
+Deliverable
+Screenshots or snippets for the shell and routes. Stop for approval.
+
+Part 7 Screen implementation loop
+Loop per screen
+1 Define acceptance criteria from the Feature inventory row
+2 Build UI using the glass components
+3 Wire state and data
+4 Add validation and inline errors
+5 Add accessibility checks for labels roles and keyboard paths
+6 Add responsive rules with iPhone sixteen Pro viewport tests
+7 Add a smoke test and a reducer or hook unit test when applicable
+
+Deliverable
+For each screen provide a short status table with criteria met files changed and open issues. Stop after each screen for approval.
+
+Part 8 Performance and quality gates
+Budgets
+1 First load script budget two hundred kilobytes compressed for the entry route
+2 Each additional route at most one hundred kilobytes compressed
+3 Images lazy loaded and optimized
+4 Route based code splits for feature screens
+
+Automation
+1 ESLint and TypeScript checks must pass
+2 Prettier formatting
+3 Minimal tests in CI
+4 Optional axe checks in development
+
+Deliverable
+Report table with bundle sizes route splits and test results. Stop for approval.
+
+Part 9 PWA and delivery
+Tasks
+1 Configure Vite PWA with manifest and icons
+2 Add an update prompt when a new service worker is available
+3 Provide Netlify or Vercel config as per the PDR
+4 Produce a final readme with run scripts and environment setup
+
+Deliverable
+Start and build commands deploy notes and an acceptance demo script
+
+Acceptance demo script
+1 Import the CSV and show the import report
+2 Navigate through all screens and run a complete workflow
+3 Refresh to confirm persistence
+4 Show focus outlines and route announcements
+5 Verify layout on iPhone sixteen Pro width and a small Android width
+6 Confirm install and any offline scope if required
+
+Stop for approval
+
