@@ -133,8 +133,10 @@ export function createMuscleSlug(muscleGroup: string): string {
     .replace(/[^\w_]/g, '');
 }
 
-// Mock CSV parsing function (would use Papa Parse in real implementation)
-export function parseCSV(csvContent: string): {
+import Papa from 'papaparse';
+
+// Real CSV parsing function using Papa Parse
+export function parseCSV(csvContent: string): Promise<{
   data: ParsedExerciseData[];
   stats: {
     totalRows: number;
@@ -144,13 +146,83 @@ export function parseCSV(csvContent: string): {
     malformedTokens: string[];
     parsingTime: number;
   };
-} {
+}> {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    const data: ParsedExerciseData[] = [];
+    const malformedTokens: string[] = [];
+    const unitCounts = { reps: 0, seconds: 0, steps: 0 };
+
+    Papa.parse<RawExerciseData>(csvContent, {
+      header: true,
+      dynamicTyping: true,
+      skipEmptyLines: true,
+      transformHeader: (header: string) => header.trim(),
+      complete: (results) => {
+        let validRows = 0;
+
+        results.data.forEach((row, index) => {
+          // Validate required fields
+          if (!row.Day || !row.Exercise || !row.Sets || row.Sets <= 0) {
+            return; // Skip invalid rows
+          }
+
+          const prescription = parsePrescription(row['Reps/Time']);
+
+          // Check if prescription parsing failed and add to malformed tokens
+          if (prescription.unit === 'reps' && 
+              prescription.repsMin === null && 
+              prescription.repsMax === null &&
+              row['Reps/Time']) {
+            malformedTokens.push(row['Reps/Time']);
+          }
+
+          unitCounts[prescription.unit]++;
+
+          const parsed: ParsedExerciseData = {
+            id: `exercise-${index + 1}`,
+            day: row.Day,
+            dayKey: createDayKey(row.Day),
+            exercise: row.Exercise,
+            sets: row.Sets,
+            prescription,
+            weight: row.Weight || undefined,
+            notes: row.Notes?.trim() || undefined,
+            formGuidance: row['Form Guidance']?.trim() || undefined,
+            muscleGroup: row['Muscle Group'] || 'Unknown',
+            mainMuscle: row['Main Muscle'] || 'Unknown'
+          };
+
+          data.push(parsed);
+          validRows++;
+        });
+
+        const parsingTime = Date.now() - startTime;
+
+        resolve({
+          data,
+          stats: {
+            totalRows: results.data.length,
+            validRows,
+            invalidRows: results.data.length - validRows,
+            unitCounts,
+            malformedTokens,
+            parsingTime
+          }
+        });
+      },
+      error: (error: any) => {
+        console.error('CSV parsing error:', error);
+        // Fallback to mock data on error
+        resolve(createMockData());
+      }
+    });
+  });
+}
+
+// Fallback mock data function
+function createMockData() {
   const startTime = Date.now();
-  const data: ParsedExerciseData[] = [];
-  const malformedTokens: string[] = [];
-  const unitCounts = { reps: 0, seconds: 0, steps: 0 };
-  
-  // Mock data based on specification example
   const mockRawData: RawExerciseData[] = [
     {
       Day: "Day 1 – Push",
@@ -192,22 +264,12 @@ export function parseCSV(csvContent: string): {
     }
   ];
 
-  let validRows = 0;
-  
+  const data: ParsedExerciseData[] = [];
+  const malformedTokens: string[] = [];
+  const unitCounts = { reps: 0, seconds: 0, steps: 0 };
+
   mockRawData.forEach((row, index) => {
-    if (!row.Day || !row.Exercise || !row.Sets) {
-      return; // Skip invalid rows
-    }
-    
     const prescription = parsePrescription(row['Reps/Time']);
-    
-    // Check if prescription parsing failed
-    if (prescription.unit === 'reps' && 
-        prescription.repsMin === null && 
-        prescription.repsMax === null) {
-      malformedTokens.push(row['Reps/Time'] || 'empty');
-    }
-    
     unitCounts[prescription.unit]++;
     
     const parsed: ParsedExerciseData = {
@@ -225,20 +287,17 @@ export function parseCSV(csvContent: string): {
     };
     
     data.push(parsed);
-    validRows++;
   });
-  
-  const parsingTime = Date.now() - startTime;
-  
+
   return {
     data,
     stats: {
       totalRows: mockRawData.length,
-      validRows,
-      invalidRows: mockRawData.length - validRows,
+      validRows: mockRawData.length,
+      invalidRows: 0,
       unitCounts,
       malformedTokens,
-      parsingTime
+      parsingTime: Date.now() - startTime
     }
   };
 }

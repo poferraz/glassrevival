@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import CSVUpload from "@/components/CSVUpload";
 import WorkoutDayNav from "@/components/WorkoutDayNav";
 import WorkoutSession from "@/components/WorkoutSession";
 import ImportReport from "@/components/ImportReport";
 import { parseCSV, ParsedExerciseData } from "@/utils/csvParser";
+import { readFileAsText, validateCSVFile } from "@/utils/fileReader";
+import { 
+  saveWorkoutData, 
+  loadWorkoutData, 
+  clearWorkoutData,
+  saveSelectedDay,
+  loadSelectedDay
+} from "@/utils/storage";
 import { Exercise } from "@/components/ExerciseCard";
 import { Button } from "@/components/ui/button";
 import GlassCard from "@/components/GlassCard";
@@ -25,6 +33,41 @@ export default function Home() {
   const [importStats, setImportStats] = useState<any>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Load persisted data on mount
+  useEffect(() => {
+    const stored = loadWorkoutData();
+    if (stored && stored.data.length > 0) {
+      setWorkoutData(stored.data);
+      
+      // Group exercises by day
+      const dayGroups = stored.data.reduce((groups, exercise: any) => {
+        const dayId = exercise.dayKey;
+        if (!groups[dayId]) {
+          groups[dayId] = {
+            id: dayId,
+            label: exercise.day,
+            machineKey: exercise.dayKey,
+            exerciseCount: 0,
+            exercises: []
+          };
+        }
+        groups[dayId].exercises.push(exercise);
+        groups[dayId].exerciseCount++;
+        return groups;
+      }, {} as any);
+      
+      const days = Object.values(dayGroups) as WorkoutDay[];
+      setWorkoutDays(days);
+      
+      // Load saved selected day or default to first
+      const savedDay = loadSelectedDay();
+      const dayToSelect = savedDay && days.find(d => d.id === savedDay) ? savedDay : days[0]?.id || "";
+      setSelectedDayId(dayToSelect);
+      
+      console.log(`Loaded ${stored.data.length} exercises from storage (last imported: ${stored.lastImported})`);
+    }
+  }, []);
 
   // Convert parsed data to Exercise format
   const convertToExercise = (data: ParsedExerciseData): Exercise => ({
@@ -50,19 +93,33 @@ export default function Home() {
     console.log(`CSV file selected: ${file.name}`);
   };
 
-  const handleParseCSV = () => {
+  const handleParseCSV = async () => {
     if (!selectedFile) return;
     
     setIsProcessing(true);
     console.log('Starting CSV parsing...');
     
-    // Simulate file reading and parsing
-    setTimeout(() => {
-      // Mock CSV content parsing
-      const result = parseCSV("mock csv content");
+    try {
+      // Validate file first
+      const validation = validateCSVFile(selectedFile);
+      if (!validation.isValid) {
+        console.error('File validation failed:', validation.error);
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Read file content
+      const csvContent = await readFileAsText(selectedFile);
+      console.log(`File read successfully: ${csvContent.length} characters`);
+      
+      // Parse CSV content
+      const result = await parseCSV(csvContent);
       
       setWorkoutData(result.data);
       setImportStats(result.stats);
+      
+      // Save to persistent storage
+      saveWorkoutData(result.data, selectedFile.name);
       
       // Group exercises by day
       const dayGroups = result.data.reduce((groups, exercise) => {
@@ -83,13 +140,19 @@ export default function Home() {
       
       const days = Object.values(dayGroups) as WorkoutDay[];
       setWorkoutDays(days);
-      setSelectedDayId(days[0]?.id || "");
+      const newSelectedDay = days[0]?.id || "";
+      setSelectedDayId(newSelectedDay);
+      saveSelectedDay(newSelectedDay);
       
       setShowImportReport(true);
       setIsProcessing(false);
       
       console.log(`Parsed ${result.data.length} exercises across ${days.length} workout days`);
-    }, 1500);
+    } catch (error) {
+      console.error('CSV parsing failed:', error);
+      setIsProcessing(false);
+      // Could show error toast here
+    }
   };
 
   const getSelectedDayExercises = (): Exercise[] => {
@@ -105,21 +168,37 @@ export default function Home() {
     return workoutDays.find(day => day.id === selectedDayId)?.label || "";
   };
 
-  const handleStartDemo = () => {
+  const handleStartDemo = async () => {
     // Load demo data
-    const demoResult = parseCSV("demo");
+    const demoResult = await parseCSV("demo");
     setWorkoutData(demoResult.data);
     
-    // Create demo workout days
-    const demoDay: WorkoutDay = {
-      id: 'day_1_push',
-      label: 'Day 1 – Push',
-      machineKey: 'day_1_push',
-      exerciseCount: demoResult.data.length
-    };
+    // Group demo exercises by day
+    const dayGroups = demoResult.data.reduce((groups, exercise) => {
+      const dayId = exercise.dayKey;
+      if (!groups[dayId]) {
+        groups[dayId] = {
+          id: dayId,
+          label: exercise.day,
+          machineKey: exercise.dayKey,
+          exerciseCount: 0,
+          exercises: []
+        };
+      }
+      groups[dayId].exercises.push(exercise);
+      groups[dayId].exerciseCount++;
+      return groups;
+    }, {} as any);
     
-    setWorkoutDays([demoDay]);
-    setSelectedDayId(demoDay.id);
+    const days = Object.values(dayGroups) as WorkoutDay[];
+    setWorkoutDays(days);
+    const newSelectedDay = days[0]?.id || "";
+    setSelectedDayId(newSelectedDay);
+    saveSelectedDay(newSelectedDay);
+    
+    // Save demo data to storage
+    saveWorkoutData(demoResult.data, 'Demo Workout');
+    
     console.log('Demo workout loaded');
   };
 
@@ -189,7 +268,10 @@ export default function Home() {
         <WorkoutDayNav
           days={workoutDays}
           activeDayId={selectedDayId}
-          onDaySelect={setSelectedDayId}
+          onDaySelect={(dayId) => {
+            setSelectedDayId(dayId);
+            saveSelectedDay(dayId);
+          }}
         />
 
         {/* Current Workout Session */}
@@ -212,6 +294,7 @@ export default function Home() {
             <Button 
               variant="outline" 
               onClick={() => {
+                clearWorkoutData();
                 setWorkoutData([]);
                 setWorkoutDays([]);
                 setSelectedDayId("");
