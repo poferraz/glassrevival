@@ -98,8 +98,8 @@ export interface SetProgress {
   restTimerUsed?: boolean;
 }
 
-// Zod schemas for validation
-export const sessionExerciseSchema = z.object({
+// Base schema without refinements for use in omit operations
+const sessionExerciseBaseSchema = z.object({
   id: z.string(),
   name: z.string().min(1),
   sets: z.number().min(1),
@@ -116,7 +116,10 @@ export const sessionExerciseSchema = z.object({
   muscleGroup: z.string().min(1),
   mainMuscle: z.string().min(1),
   restSeconds: z.number().min(0).optional(),
-}).refine(
+});
+
+// Zod schemas for validation with refinements
+export const sessionExerciseSchema = sessionExerciseBaseSchema.refine(
   (data) => {
     // Ensure proper ranges for reps
     if (data.repsMin && data.repsMax) {
@@ -196,7 +199,22 @@ export const workoutProgressSchema = z.object({
 });
 
 // Insert schemas (omit auto-generated fields)
-export const insertSessionExerciseSchema = sessionExerciseSchema.omit({ id: true });
+export const insertSessionExerciseSchema = sessionExerciseBaseSchema.omit({ id: true }).refine(
+  (data) => {
+    // Ensure proper ranges for reps
+    if (data.repsMin && data.repsMax) {
+      return data.repsMin <= data.repsMax;
+    }
+    // Ensure proper ranges for time
+    if (data.timeSecondsMin && data.timeSecondsMax) {
+      return data.timeSecondsMin <= data.timeSecondsMax;
+    }
+    return true;
+  },
+  {
+    message: "Min values must be less than or equal to max values"
+  }
+);
 export const insertSessionTemplateSchema = sessionTemplateSchema.omit({ 
   id: true, 
   createdAt: true, 

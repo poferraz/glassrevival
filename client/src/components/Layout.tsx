@@ -2,7 +2,8 @@ import { ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
 import GlassCard from "./GlassCard";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Menu, User } from "lucide-react";
+import { Moon, Sun, Menu, User, Calendar, LibraryBig, Upload } from "lucide-react";
+import { Link, useLocation } from "wouter";
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,11 +13,22 @@ interface LayoutProps {
 export default function Layout({ children, className }: LayoutProps) {
   const [darkMode, setDarkMode] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
+  const [location] = useLocation();
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
     document.documentElement.classList.toggle('dark');
     console.log('Dark mode toggled:', !darkMode);
+  };
+
+  const navigationItems = [
+    { path: '/', label: 'Calendar', icon: Calendar },
+    { path: '/sessions', label: 'Sessions', icon: LibraryBig },
+    { path: '/import', label: 'Import', icon: Upload },
+  ];
+
+  const isActivePath = (path: string) => {
+    return location === path || (path !== '/' && location.startsWith(path));
   };
 
   return (
@@ -46,6 +58,25 @@ export default function Layout({ children, className }: LayoutProps) {
               </div>
               
               <div className="flex items-center gap-2">
+                {/* Desktop Navigation */}
+                <div className="hidden md:flex items-center gap-1 mr-2">
+                  {navigationItems.map(({ path, label, icon: Icon }) => (
+                    <Link key={path} href={path}>
+                      <Button
+                        variant={isActivePath(path) ? "default" : "ghost"}
+                        size="sm"
+                        className={`text-white hover:text-white ${
+                          isActivePath(path) ? 'bg-white/20' : ''
+                        }`}
+                        data-testid={`nav-${label.toLowerCase()}`}
+                      >
+                        <Icon className="w-4 h-4 mr-1" />
+                        {label}
+                      </Button>
+                    </Link>
+                  ))}
+                </div>
+
                 <Button
                   size="icon"
                   variant="ghost"

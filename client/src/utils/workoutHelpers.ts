@@ -265,7 +265,7 @@ export function getSetStatus(exercise: SessionExercise, progress: WorkoutProgres
 }
 
 export function getAllSetsStatus(exercise: SessionExercise, progress: WorkoutProgress | null): ('not_started' | 'in_progress' | 'completed')[] {
-  const statuses = [];
+  const statuses: ('not_started' | 'in_progress' | 'completed')[] = [];
   for (let i = 1; i <= exercise.sets; i++) {
     statuses.push(getSetStatus(exercise, progress, i));
   }
