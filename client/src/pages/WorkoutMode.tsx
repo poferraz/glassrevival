@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRoute, useLocation } from "wouter";
 import { SessionExercise, WorkoutProgress, SetProgress, SessionInstance, ScheduledSession } from "@shared/schema";
 import { 
@@ -67,13 +67,10 @@ export default function WorkoutMode() {
   const [sessionInstance, setSessionInstance] = useState<SessionInstance | ScheduledSession | null>(null);
   const [sessionNotFound, setSessionNotFound] = useState(false);
   
-  // Set editing state
-  const [currentSetInputs, setCurrentSetInputs] = useState({
-    reps: 0,
-    weight: 0,
-    timeSeconds: 0,
-    steps: 0
-  });
+  // Handler for progress updates from SetList
+  const handleProgressUpdate = useCallback((updatedProgress: WorkoutProgress[]) => {
+    setWorkoutProgress(updatedProgress);
+  }, []);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -193,24 +190,11 @@ export default function WorkoutMode() {
   }, [isTimerRunning, timerType]);
 
   const currentExercise = exercises[currentExerciseIndex];
-  const currentExerciseProgress = currentExercise 
-    ? getExerciseProgress(sessionId!, currentExercise.id) 
-    : null;
 
-  // Initialize set inputs when exercise or set changes
-  useEffect(() => {
-    if (!currentExercise) return;
-    
-    const currentSetProgress = currentExerciseProgress?.sets.find(s => s.setNumber === currentSetIndex + 1);
-    
-    // Initialize with template defaults or existing progress
-    setCurrentSetInputs({
-      reps: currentSetProgress?.reps || (currentExercise.unit === 'reps' ? (currentExercise.repsMin || 0) : 0),
-      weight: currentSetProgress?.weight || currentExercise.weight || 0,
-      timeSeconds: currentSetProgress?.timeSeconds || (currentExercise.unit === 'seconds' ? (currentExercise.timeSecondsMin || 0) : 0),
-      steps: currentSetProgress?.steps || (currentExercise.unit === 'steps' ? (currentExercise.stepsCount || 0) : 0)
-    });
-  }, [currentExerciseIndex, currentSetIndex, currentExercise, currentExerciseProgress]);
+  // Current exercise progress for display
+  const currentExerciseProgress = useMemo(() => {
+    return currentExercise ? getExerciseProgress(sessionId!, currentExercise.id) : null;
+  }, [workoutProgress, currentExercise, sessionId]);
 
   const startWorkout = () => {
     setSessionStarted(true);
@@ -218,27 +202,7 @@ export default function WorkoutMode() {
     console.log('Workout started');
   };
 
-  // Helper functions for input management
-  const updateSetInput = (field: keyof typeof currentSetInputs, value: number) => {
-    setCurrentSetInputs(prev => ({
-      ...prev,
-      [field]: Math.max(0, value)
-    }));
-  };
-
-  const incrementValue = (field: keyof typeof currentSetInputs, amount: number = 1) => {
-    setCurrentSetInputs(prev => ({
-      ...prev,
-      [field]: prev[field] + amount
-    }));
-  };
-
-  const decrementValue = (field: keyof typeof currentSetInputs, amount: number = 1) => {
-    setCurrentSetInputs(prev => ({
-      ...prev,
-      [field]: Math.max(0, prev[field] - amount)
-    }));
-  };
+  // Helper function for session status updates (defined below)
 
   const completeSet = () => {
     if (!currentExercise || !sessionId) return;
@@ -250,17 +214,13 @@ export default function WorkoutMode() {
       progress.sets.push(createEmptySetProgress(progress.sets.length + 1));
     }
 
-    // Mark current set as completed with actual values
+    // Mark current set as completed - values are managed by SetList
+    const currentSetProgress = progress.sets[currentSetIndex];
     progress.sets[currentSetIndex] = {
-      ...progress.sets[currentSetIndex],
+      ...currentSetProgress,
       completed: true,
       completedAt: new Date().toISOString(),
-      restTimerUsed: timerType === 'rest',
-      // Save actual performed values
-      reps: currentExercise.unit === 'reps' ? currentSetInputs.reps : undefined,
-      timeSeconds: currentExercise.unit === 'seconds' ? currentSetInputs.timeSeconds : undefined,
-      steps: currentExercise.unit === 'steps' ? currentSetInputs.steps : undefined,
-      weight: currentSetInputs.weight > 0 ? currentSetInputs.weight : undefined
+      restTimerUsed: timerType === 'rest'
     };
 
     saveWorkoutProgress(progress);
@@ -277,12 +237,7 @@ export default function WorkoutMode() {
       nextExercise();
     }
 
-    console.log(`Set ${currentSetIndex + 1} completed for ${currentExercise.name}`, {
-      reps: currentSetInputs.reps,
-      weight: currentSetInputs.weight,
-      timeSeconds: currentSetInputs.timeSeconds,
-      steps: currentSetInputs.steps
-    });
+    console.log(`Set ${currentSetIndex + 1} completed for ${currentExercise.name}`, progress.sets[currentSetIndex]);
   };
 
   const nextExercise = () => {
@@ -548,8 +503,13 @@ export default function WorkoutMode() {
             )}
 
             {/* Set List Interface */}
-            {sessionStarted && (
-              <SetList />
+            {sessionStarted && currentExercise && sessionId && (
+              <SetList 
+                sessionId={sessionId}
+                currentExercise={currentExercise}
+                workoutProgress={workoutProgress}
+                onProgressUpdate={(updatedProgress) => setWorkoutProgress(updatedProgress)}
+              />
             )}
 
             {/* Action Buttons */}

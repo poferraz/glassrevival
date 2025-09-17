@@ -1,55 +1,127 @@
-import { useState, useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { SetRow } from "./SetRow";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import GlassCard from "./GlassCard";
-
-interface SetData {
-  id: string;
-  reps: number;
-  weight: number;
-  completed: boolean;
-}
+import { SessionExercise, WorkoutProgress, SetProgress } from "@shared/schema";
+import { saveWorkoutProgress } from "@/utils/sessionStorage";
+import { createEmptySetProgress, createEmptyWorkoutProgress } from "@/utils/workoutHelpers";
 
 interface SetListProps {
-  // Static sample data for now
+  sessionId: string;
+  currentExercise: SessionExercise;
+  workoutProgress: WorkoutProgress[];
+  onProgressUpdate: (updatedProgress: WorkoutProgress[]) => void;
 }
 
-export default function SetList({}: SetListProps) {
-  // Static sample data with 4 sets to test layout
-  const [sets, setSets] = useState<SetData[]>([
-    { id: '1', reps: 12, weight: 50, completed: true },
-    { id: '2', reps: 10, weight: 52.5, completed: true },
-    { id: '3', reps: 8, weight: 55, completed: false },
-    { id: '4', reps: 8, weight: 55, completed: false }
-  ]);
+export default function SetList({ 
+  sessionId, 
+  currentExercise, 
+  workoutProgress, 
+  onProgressUpdate 
+}: SetListProps) {
+  // Get current exercise progress or create empty one
+  const currentExerciseProgress = useMemo(() => {
+    return workoutProgress.find(p => p.exerciseId === currentExercise.id) 
+      || createEmptyWorkoutProgress(sessionId, currentExercise.id);
+  }, [workoutProgress, currentExercise.id, sessionId]);
+  
+  // Generate sets data from exercise definition and current progress
+  const sets = useMemo(() => {
+    const setsArray = [];
+    for (let i = 0; i < currentExercise.sets; i++) {
+      const setNumber = i + 1;
+      const setProgress = currentExerciseProgress.sets.find(s => s.setNumber === setNumber)
+        || createEmptySetProgress(setNumber);
+      
+      setsArray.push({
+        setNumber,
+        setProgress,
+        // Default values based on exercise definition
+        defaultReps: currentExercise.unit === 'reps' ? (currentExercise.repsMin || 8) : 0,
+        defaultWeight: currentExercise.weight || 0,
+        defaultTimeSeconds: currentExercise.unit === 'seconds' ? (currentExercise.timeSecondsMin || 30) : 0,
+        defaultSteps: currentExercise.unit === 'steps' ? (currentExercise.stepsCount || 10) : 0
+      });
+    }
+    return setsArray;
+  }, [currentExercise, currentExerciseProgress]);
 
-  const handleSetChange = useCallback((id: string, data: { reps: number; weight: number }) => {
-    setSets(prev => prev.map(set => 
-      set.id === id ? { ...set, ...data } : set
-    ));
-  }, []);
+  const updateProgress = useCallback((updatedExerciseProgress: WorkoutProgress) => {
+    // Update the workout progress and save to storage
+    saveWorkoutProgress(updatedExerciseProgress);
+    
+    // Update parent state
+    const updatedProgressList = workoutProgress.map(p => 
+      p.exerciseId === updatedExerciseProgress.exerciseId ? updatedExerciseProgress : p
+    );
+    
+    // If this exercise progress didn't exist before, add it
+    if (!workoutProgress.find(p => p.exerciseId === updatedExerciseProgress.exerciseId)) {
+      updatedProgressList.push(updatedExerciseProgress);
+    }
+    
+    onProgressUpdate(updatedProgressList);
+  }, [workoutProgress, onProgressUpdate]);
 
-  const handleToggleComplete = useCallback((id: string) => {
-    setSets(prev => prev.map(set => 
-      set.id === id ? { ...set, completed: !set.completed } : set
-    ));
-  }, []);
+  const handleSetChange = useCallback((setNumber: number, data: { reps: number; weight: number }) => {
+    // Update the set progress with new values
+    let updatedProgress = { ...currentExerciseProgress };
+    
+    // Ensure we have enough set entries
+    while (updatedProgress.sets.length < setNumber) {
+      updatedProgress.sets.push(createEmptySetProgress(updatedProgress.sets.length + 1));
+    }
+    
+    // Update the specific set
+    updatedProgress.sets = updatedProgress.sets.map(set => 
+      set.setNumber === setNumber 
+        ? { 
+            ...set, 
+            reps: currentExercise.unit === 'reps' ? data.reps : set.reps,
+            weight: data.weight > 0 ? data.weight : undefined,
+            timeSeconds: currentExercise.unit === 'seconds' ? data.reps : set.timeSeconds, // Using reps field for seconds
+            steps: currentExercise.unit === 'steps' ? data.reps : set.steps // Using reps field for steps
+          }
+        : set
+    );
+    
+    updateProgress(updatedProgress);
+  }, [currentExerciseProgress, currentExercise.unit, updateProgress]);
 
-  const handleRemoveSet = useCallback((id: string) => {
-    setSets(prev => prev.filter(set => set.id !== id));
+  const handleToggleComplete = useCallback((setNumber: number) => {
+    let updatedProgress = { ...currentExerciseProgress };
+    
+    // Ensure we have enough set entries
+    while (updatedProgress.sets.length < setNumber) {
+      updatedProgress.sets.push(createEmptySetProgress(updatedProgress.sets.length + 1));
+    }
+    
+    // Toggle completion status
+    updatedProgress.sets = updatedProgress.sets.map(set => 
+      set.setNumber === setNumber 
+        ? { 
+            ...set, 
+            completed: !set.completed,
+            completedAt: !set.completed ? new Date().toISOString() : undefined
+          }
+        : set
+    );
+    
+    updateProgress(updatedProgress);
+  }, [currentExerciseProgress, updateProgress]);
+
+  const handleRemoveSet = useCallback((setNumber: number) => {
+    // For now, we don't allow removing sets from the template definition
+    // This would require updating the exercise template
+    console.log('Remove set not implemented - would need to modify exercise template');
   }, []);
 
   const handleAddSet = useCallback(() => {
-    const lastSet = sets[sets.length - 1];
-    const newSet: SetData = {
-      id: Date.now().toString(),
-      reps: lastSet?.reps || 8,
-      weight: lastSet?.weight || 50,
-      completed: false
-    };
-    setSets(prev => [...prev, newSet]);
-  }, [sets]);
+    // For now, we don't allow adding sets beyond the template definition
+    // This would require updating the exercise template  
+    console.log('Add set not implemented - would need to modify exercise template');
+  }, []);
 
   return (
     <GlassCard variant="tertiary" className="overflow-hidden">
@@ -60,31 +132,36 @@ export default function SetList({}: SetListProps) {
         
         {/* Sets Container with max height for mobile viewport */}
         <div className="set-list-container space-y-3 mb-4">
-          {sets.map((set, index) => (
-            <SetRow
-              key={set.id}
-              index={index + 1}
-              reps={set.reps}
-              weight={set.weight}
-              completed={set.completed}
-              onChange={(data) => handleSetChange(set.id, data)}
-              onToggleComplete={() => handleToggleComplete(set.id)}
-              onRemove={() => handleRemoveSet(set.id)}
-            />
-          ))}
+          {sets.map((set) => {
+            const displayValue = currentExercise.unit === 'reps' ? 
+              (set.setProgress.reps ?? set.defaultReps) :
+              currentExercise.unit === 'seconds' ?
+              (set.setProgress.timeSeconds ?? set.defaultTimeSeconds) :
+              (set.setProgress.steps ?? set.defaultSteps);
+              
+            return (
+              <SetRow
+                key={set.setNumber}
+                index={set.setNumber}
+                reps={displayValue}
+                weight={set.setProgress.weight ?? set.defaultWeight}
+                completed={set.setProgress.completed}
+                unit={currentExercise.unit}
+                perSide={currentExercise.perSide}
+                onChange={(data) => handleSetChange(set.setNumber, data)}
+                onToggleComplete={() => handleToggleComplete(set.setNumber)}
+                onRemove={() => handleRemoveSet(set.setNumber)}
+              />
+            );
+          })}
         </div>
 
-        {/* Add Set Button */}
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handleAddSet}
-          className="w-full text-white border-white/20 hover:bg-white/10"
-          data-testid="button-add-set"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Set
-        </Button>
+        {/* Note: Add Set functionality would require modifying exercise template */}
+        {currentExercise.sets < 10 && (
+          <div className="text-center text-white/60 text-sm">
+            Template defines {currentExercise.sets} sets
+          </div>
+        )}
       </div>
     </GlassCard>
   );

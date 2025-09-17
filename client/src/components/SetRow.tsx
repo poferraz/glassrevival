@@ -21,6 +21,8 @@ interface SetRowProps {
   reps: number;
   weight: number;
   completed: boolean;
+  unit: 'reps' | 'seconds' | 'steps';
+  perSide?: boolean;
   onChange: (data: { reps: number; weight: number }) => void;
   onToggleComplete: () => void;
   onRemove: () => void;
@@ -37,6 +39,8 @@ export const SetRow = memo(function SetRow({
   reps,
   weight,
   completed,
+  unit,
+  perSide = false,
   onChange,
   onToggleComplete,
   onRemove
@@ -125,7 +129,7 @@ export const SetRow = memo(function SetRow({
                 variant="outline"
                 onClick={() => decrementValue('reps')}
                 className="text-white border-white/20 hover:bg-white/10 shrink-0 h-8 w-8"
-                data-testid={`button-decrement-reps-${index}`}
+                data-testid={`button-decrement-${unit}-${index}`}
               >
                 <Minus className="w-3 h-3" />
               </Button>
@@ -143,7 +147,7 @@ export const SetRow = memo(function SetRow({
                 }}
                 className="text-center text-lg font-semibold bg-white/10 border-white/20 text-white h-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 autoFocus
-                data-testid={`input-reps-${index}`}
+                data-testid={`input-${unit}-${index}`}
               />
               
               <Button
@@ -151,7 +155,7 @@ export const SetRow = memo(function SetRow({
                 variant="outline"
                 onClick={() => incrementValue('reps')}
                 className="text-white border-white/20 hover:bg-white/10 shrink-0 h-8 w-8"
-                data-testid={`button-increment-reps-${index}`}
+                data-testid={`button-increment-${unit}-${index}`}
               >
                 <Plus className="w-3 h-3" />
               </Button>
@@ -160,10 +164,10 @@ export const SetRow = memo(function SetRow({
             <button
               onClick={() => startEditing('reps')}
               className="text-lg font-bold text-white hover:text-blue-300 transition-colors w-full text-center min-h-[2rem] flex items-center justify-center"
-              aria-label={`Edit reps for set ${index}, currently ${currentReps}`}
-              data-testid={`button-edit-reps-${index}`}
+              aria-label={`Edit ${unit === 'reps' ? 'reps' : unit === 'seconds' ? 'seconds' : 'steps'} for set ${index}, currently ${currentReps}`}
+              data-testid={`button-edit-${unit}-${index}`}
             >
-              {currentReps} reps
+              {currentReps} {unit === 'reps' ? (perSide ? 'reps per side' : 'reps') : unit === 'seconds' ? 's' : 'steps'}
             </button>
           )}
         </div>
