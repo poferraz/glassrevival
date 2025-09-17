@@ -27,9 +27,13 @@ export default function SetList({
   }, [workoutProgress, currentExercise.id, sessionId]);
   
   // Generate sets data from exercise definition and current progress
+  // Allow dynamic expansion beyond template definition
   const sets = useMemo(() => {
     const setsArray = [];
-    for (let i = 0; i < currentExercise.sets; i++) {
+    // Use the maximum of template sets or actual progress sets
+    const maxSets = Math.max(currentExercise.sets, currentExerciseProgress.sets.length);
+    
+    for (let i = 0; i < maxSets; i++) {
       const setNumber = i + 1;
       const setProgress = currentExerciseProgress.sets.find(s => s.setNumber === setNumber)
         || createEmptySetProgress(setNumber);
@@ -73,18 +77,35 @@ export default function SetList({
       updatedProgress.sets.push(createEmptySetProgress(updatedProgress.sets.length + 1));
     }
     
-    // Update the specific set
-    updatedProgress.sets = updatedProgress.sets.map(set => 
-      set.setNumber === setNumber 
-        ? { 
-            ...set, 
-            reps: currentExercise.unit === 'reps' ? data.reps : set.reps,
-            weight: data.weight > 0 ? data.weight : undefined,
-            timeSeconds: currentExercise.unit === 'seconds' ? data.reps : set.timeSeconds, // Using reps field for seconds
-            steps: currentExercise.unit === 'steps' ? data.reps : set.steps // Using reps field for steps
-          }
-        : set
-    );
+    // Update the specific set and reset completion flag if values changed
+    updatedProgress.sets = updatedProgress.sets.map(set => {
+      if (set.setNumber === setNumber) {
+        const newReps = currentExercise.unit === 'reps' ? data.reps : set.reps;
+        const newTimeSeconds = currentExercise.unit === 'seconds' ? data.reps : set.timeSeconds;
+        const newSteps = currentExercise.unit === 'steps' ? data.reps : set.steps;
+        const newWeight = data.weight > 0 ? data.weight : undefined;
+        
+        // Check if values actually changed to reset completion
+        const repsChanged = newReps !== set.reps;
+        const timeChanged = newTimeSeconds !== set.timeSeconds;
+        const stepsChanged = newSteps !== set.steps;
+        const weightChanged = newWeight !== set.weight;
+        
+        const shouldResetCompletion = set.completed && (repsChanged || timeChanged || stepsChanged || weightChanged);
+        
+        return {
+          ...set,
+          reps: newReps,
+          weight: newWeight,
+          timeSeconds: newTimeSeconds,
+          steps: newSteps,
+          // Reset completion flag if values changed
+          completed: shouldResetCompletion ? false : set.completed,
+          completedAt: shouldResetCompletion ? undefined : set.completedAt
+        };
+      }
+      return set;
+    });
     
     updateProgress(updatedProgress);
   }, [currentExerciseProgress, currentExercise.unit, updateProgress]);
@@ -112,16 +133,49 @@ export default function SetList({
   }, [currentExerciseProgress, updateProgress]);
 
   const handleRemoveSet = useCallback((setNumber: number) => {
-    // For now, we don't allow removing sets from the template definition
-    // This would require updating the exercise template
-    console.log('Remove set not implemented - would need to modify exercise template');
-  }, []);
+    // Prevent removing if only one set remains
+    if (sets.length <= 1) {
+      alert('Cannot remove the last set. At least one set is required.');
+      return;
+    }
+    
+    let updatedProgress = { ...currentExerciseProgress };
+    
+    // Remove the set and renumber remaining sets
+    const filteredSets = updatedProgress.sets
+      .filter(set => set.setNumber !== setNumber)
+      .map((set, index) => ({
+        ...set,
+        setNumber: index + 1 // Renumber sets to maintain sequence
+      }));
+    
+    updatedProgress.sets = filteredSets;
+    updateProgress(updatedProgress);
+  }, [currentExerciseProgress, sets.length, updateProgress]);
 
   const handleAddSet = useCallback(() => {
-    // For now, we don't allow adding sets beyond the template definition
-    // This would require updating the exercise template  
-    console.log('Add set not implemented - would need to modify exercise template');
-  }, []);
+    let updatedProgress = { ...currentExerciseProgress };
+    
+    // Create new set with default values
+    const newSetNumber = sets.length + 1;
+    const newSet = createEmptySetProgress(newSetNumber);
+    
+    // Set default values based on exercise type
+    if (currentExercise.unit === 'reps') {
+      newSet.reps = currentExercise.repsMin || 8;
+    } else if (currentExercise.unit === 'seconds') {
+      newSet.timeSeconds = currentExercise.timeSecondsMin || 30;
+    } else if (currentExercise.unit === 'steps') {
+      newSet.steps = currentExercise.stepsCount || 10;
+    }
+    
+    if (currentExercise.weight && currentExercise.weight > 0) {
+      newSet.weight = currentExercise.weight;
+    }
+    
+    updatedProgress.sets.push(newSet);
+    updateProgress(updatedProgress);
+  }, [currentExerciseProgress, sets.length, currentExercise, updateProgress]);
 
   return (
     <GlassCard variant="tertiary" className="overflow-hidden">
@@ -156,10 +210,26 @@ export default function SetList({
           })}
         </div>
 
-        {/* Note: Add Set functionality would require modifying exercise template */}
-        {currentExercise.sets < 10 && (
-          <div className="text-center text-white/60 text-sm">
-            Template defines {currentExercise.sets} sets
+        {/* Add Set Button */}
+        {sets.length < 12 && (
+          <div className="mt-4">
+            <Button
+              onClick={handleAddSet}
+              variant="outline"
+              size="sm"
+              className="w-full text-white border-white/20 hover:bg-white/10 hover:border-white/30"
+              data-testid="button-add-set"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Set
+            </Button>
+          </div>
+        )}
+        
+        {/* Template info */}
+        {sets.length !== currentExercise.sets && (
+          <div className="text-center text-white/60 text-xs mt-2">
+            Template: {currentExercise.sets} sets, Current: {sets.length} sets
           </div>
         )}
       </div>

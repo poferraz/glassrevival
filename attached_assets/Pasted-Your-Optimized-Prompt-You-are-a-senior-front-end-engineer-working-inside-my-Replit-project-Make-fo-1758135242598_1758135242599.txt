@@ -1,0 +1,40 @@
+Your Optimized Prompt:
+You are a senior front end engineer working inside my Replit project. Make focused, small commits with clear messages. Keep all current features stable.
+
+Goal
+Simplify navigation to only My Workouts and Calendar. Remove every duplicate CSV import entry. Keep the entire app mobile first and correctly fitted to an iPhone 16 Pro screen.
+
+Hard Rules
+1 Do not change workout logic, data shapes, or storage
+2 Reuse existing context, reducers, and styles
+3 If anything is unclear, list Open Questions and stop
+
+Required Changes
+
+Area	Action
+Global nav	Remove the Import CSV route and page entirely. Navigation must show only My Workouts and Calendar.
+My Workouts modal	Delete the Import CSV modal and all related components, hooks, and strings. No modal remains.
+My Workouts header	Remove the Import CSV button or banner at the top of the page. No top level import control remains.
+Single import entry	Provide exactly one entry point inside My Workouts under an overflow Actions menu item labeled Import CSV. This opens the native file picker and runs the existing importer inline on the same page. No modal and no separate page.
+Inline result	After import, show a compact inline result card inside My Workouts with totals, created or updated templates, and validation errors with line numbers. Dismissible.
+Mobile fit	Use dvh units and safe area insets so every screen fits on iPhone 16 Pro without hidden overflow. When the keyboard opens, keep primary actions visible. Hit targets minimum 44 by 44.
+
+Acceptance Tests
+
+Check	Expectation
+Nav items	Only My Workouts and Calendar are visible. No Import CSV item anywhere.
+My Workouts top area	No Import CSV button or banner at the top.
+Modals	No Import CSV modal exists.
+Import flow	Import is accessible only through the Actions menu on My Workouts, uses a native file picker, runs inline, and shows a compact summary card.
+Mobile fit	All primary screens fit on iPhone 16 Pro. Keyboard never hides primary actions.
+
+Step Plan
+1 Inventory current nav, routes, and Import CSV components. Report file paths and dependencies.
+2 Remove the Import CSV page, route, and nav item. Confirm build passes.
+3 Delete the Import CSV modal and any top header import control inside My Workouts.
+4 Add a single Actions menu item Import CSV that triggers the existing importer and renders the inline summary card.
+5 Apply dvh and safe area layout checks across My Workouts and Calendar. Fix any remaining fit issues.
+6 Run acceptance tests and list any residual issues.
+
+What Changed
+Clear directive to erase the Import CSV modal and the top of page Import CSV control, keep only one import entry inside My Workouts through the Actions menu, and verify mobile first fit on iPhone 16 Pro.
