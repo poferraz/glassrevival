@@ -40,8 +40,11 @@ import {
   Circle,
   RotateCcw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Plus,
+  Minus
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface WorkoutModeProps {
   sessionId: string;
@@ -62,6 +65,14 @@ export default function WorkoutMode() {
   const [sessionStarted, setSessionStarted] = useState(false);
   const [sessionInstance, setSessionInstance] = useState<SessionInstance | ScheduledSession | null>(null);
   const [sessionNotFound, setSessionNotFound] = useState(false);
+  
+  // Set editing state
+  const [currentSetInputs, setCurrentSetInputs] = useState({
+    reps: 0,
+    weight: 0,
+    timeSeconds: 0,
+    steps: 0
+  });
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -185,10 +196,47 @@ export default function WorkoutMode() {
     ? getExerciseProgress(sessionId!, currentExercise.id) 
     : null;
 
+  // Initialize set inputs when exercise or set changes
+  useEffect(() => {
+    if (!currentExercise) return;
+    
+    const currentSetProgress = currentExerciseProgress?.sets.find(s => s.setNumber === currentSetIndex + 1);
+    
+    // Initialize with template defaults or existing progress
+    setCurrentSetInputs({
+      reps: currentSetProgress?.reps || (currentExercise.unit === 'reps' ? (currentExercise.repsMin || 0) : 0),
+      weight: currentSetProgress?.weight || currentExercise.weight || 0,
+      timeSeconds: currentSetProgress?.timeSeconds || (currentExercise.unit === 'seconds' ? (currentExercise.timeSecondsMin || 0) : 0),
+      steps: currentSetProgress?.steps || (currentExercise.unit === 'steps' ? (currentExercise.stepsCount || 0) : 0)
+    });
+  }, [currentExerciseIndex, currentSetIndex, currentExercise, currentExerciseProgress]);
+
   const startWorkout = () => {
     setSessionStarted(true);
     startTimeRef.current = Date.now();
     console.log('Workout started');
+  };
+
+  // Helper functions for input management
+  const updateSetInput = (field: keyof typeof currentSetInputs, value: number) => {
+    setCurrentSetInputs(prev => ({
+      ...prev,
+      [field]: Math.max(0, value)
+    }));
+  };
+
+  const incrementValue = (field: keyof typeof currentSetInputs, amount: number = 1) => {
+    setCurrentSetInputs(prev => ({
+      ...prev,
+      [field]: prev[field] + amount
+    }));
+  };
+
+  const decrementValue = (field: keyof typeof currentSetInputs, amount: number = 1) => {
+    setCurrentSetInputs(prev => ({
+      ...prev,
+      [field]: Math.max(0, prev[field] - amount)
+    }));
   };
 
   const completeSet = () => {
@@ -201,12 +249,17 @@ export default function WorkoutMode() {
       progress.sets.push(createEmptySetProgress(progress.sets.length + 1));
     }
 
-    // Mark current set as completed
+    // Mark current set as completed with actual values
     progress.sets[currentSetIndex] = {
       ...progress.sets[currentSetIndex],
       completed: true,
       completedAt: new Date().toISOString(),
-      restTimerUsed: timerType === 'rest'
+      restTimerUsed: timerType === 'rest',
+      // Save actual performed values
+      reps: currentExercise.unit === 'reps' ? currentSetInputs.reps : undefined,
+      timeSeconds: currentExercise.unit === 'seconds' ? currentSetInputs.timeSeconds : undefined,
+      steps: currentExercise.unit === 'steps' ? currentSetInputs.steps : undefined,
+      weight: currentSetInputs.weight > 0 ? currentSetInputs.weight : undefined
     };
 
     saveWorkoutProgress(progress);
@@ -223,7 +276,12 @@ export default function WorkoutMode() {
       nextExercise();
     }
 
-    console.log(`Set ${currentSetIndex + 1} completed for ${currentExercise.name}`);
+    console.log(`Set ${currentSetIndex + 1} completed for ${currentExercise.name}`, {
+      reps: currentSetInputs.reps,
+      weight: currentSetInputs.weight,
+      timeSeconds: currentSetInputs.timeSeconds,
+      steps: currentSetInputs.steps
+    });
   };
 
   const nextExercise = () => {
@@ -486,6 +544,128 @@ export default function WorkoutMode() {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Set Editing Interface */}
+            {sessionStarted && (
+              <GlassCard variant="tertiary" className="mb-6">
+                <div className="p-4">
+                  <h3 className="text-lg font-semibold text-white mb-4 text-center">
+                    Set {currentSetIndex + 1} Details
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    {/* Main Exercise Input (Reps/Time/Steps) */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/80 mb-2">
+                        {currentExercise.unit === 'reps' && 'Reps Performed'}
+                        {currentExercise.unit === 'seconds' && 'Time (seconds)'}
+                        {currentExercise.unit === 'steps' && 'Steps'}
+                      </label>
+                      
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => decrementValue(
+                            currentExercise.unit === 'reps' ? 'reps' :
+                            currentExercise.unit === 'seconds' ? 'timeSeconds' : 'steps'
+                          )}
+                          className="text-white border-white/20 hover:bg-white/10 shrink-0"
+                          data-testid="button-decrement-main"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                        
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          value={
+                            currentExercise.unit === 'reps' ? currentSetInputs.reps :
+                            currentExercise.unit === 'seconds' ? currentSetInputs.timeSeconds : 
+                            currentSetInputs.steps
+                          }
+                          onChange={(e) => updateSetInput(
+                            currentExercise.unit === 'reps' ? 'reps' :
+                            currentExercise.unit === 'seconds' ? 'timeSeconds' : 'steps',
+                            parseInt(e.target.value) || 0
+                          )}
+                          className="text-center text-lg font-semibold bg-white/10 border-white/20 text-white placeholder:text-white/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          data-testid="input-main-value"
+                        />
+                        
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => incrementValue(
+                            currentExercise.unit === 'reps' ? 'reps' :
+                            currentExercise.unit === 'seconds' ? 'timeSeconds' : 'steps'
+                          )}
+                          className="text-white border-white/20 hover:bg-white/10 shrink-0"
+                          data-testid="button-increment-main"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      
+                      {/* Show target vs actual */}
+                      <div className="text-center text-sm text-white/60 mt-1">
+                        Target: {formatExercisePrescription(currentExercise)}
+                      </div>
+                    </div>
+                    
+                    {/* Weight Input */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/80 mb-2">
+                        Weight (kg)
+                        {currentExercise.weight && (
+                          <span className="text-white/60 ml-1">
+                            (template: {formatWeight(currentExercise.weight)})
+                          </span>
+                        )}
+                      </label>
+                      
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => decrementValue('weight', 2.5)}
+                          className="text-white border-white/20 hover:bg-white/10 shrink-0"
+                          data-testid="button-decrement-weight"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                        
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.5"
+                          min="0"
+                          value={currentSetInputs.weight}
+                          onChange={(e) => updateSetInput('weight', parseFloat(e.target.value) || 0)}
+                          className="text-center text-lg font-semibold bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                          placeholder="0"
+                          data-testid="input-weight"
+                        />
+                        
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => incrementValue('weight', 2.5)}
+                          className="text-white border-white/20 hover:bg-white/10 shrink-0"
+                          data-testid="button-increment-weight"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="text-center text-xs text-white/50 mt-1">
+                        Use +/- for 2.5kg increments
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </GlassCard>
             )}
 
             {/* Action Buttons */}
