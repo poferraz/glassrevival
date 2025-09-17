@@ -262,6 +262,41 @@ export default function WorkoutMode() {
     }
   };
 
+  const handleAddSet = useCallback(() => {
+    if (!currentExercise || !sessionId || !currentExerciseProgress) return;
+    
+    // Don't allow more than 12 sets
+    if (currentExerciseProgress.sets.length >= 12) return;
+    
+    let updatedProgress = { ...currentExerciseProgress, sets: [...currentExerciseProgress.sets] };
+    
+    // Create new set with default values
+    const newSetNumber = currentExerciseProgress.sets.length + 1;
+    const newSet = createEmptySetProgress(newSetNumber);
+    
+    // Set default values based on exercise type
+    if (currentExercise.unit === 'reps') {
+      newSet.reps = currentExercise.repsMin || 8;
+    } else if (currentExercise.unit === 'seconds') {
+      newSet.timeSeconds = currentExercise.timeSecondsMin || 30;
+    } else if (currentExercise.unit === 'steps') {
+      newSet.steps = currentExercise.stepsCount || 10;
+    }
+    
+    if (currentExercise.weight && currentExercise.weight > 0) {
+      newSet.weight = currentExercise.weight;
+    }
+    
+    updatedProgress.sets.push(newSet);
+    
+    saveWorkoutProgress(updatedProgress);
+    setWorkoutProgress(prev => {
+      const updated = prev.filter(p => p.exerciseId !== currentExercise.id);
+      updated.push(updatedProgress);
+      return updated;
+    });
+  }, [currentExercise, sessionId, currentExerciseProgress]);
+
   const getRestDuration = (): number => {
     return currentExercise?.restSeconds || 60;
   };
@@ -582,7 +617,7 @@ export default function WorkoutMode() {
               </Button>
               
               {/* Set Status Indicators */}
-              <div className="flex gap-1">
+              <div className="flex gap-1 items-center">
                 {Array.from({ length: currentExercise.sets }, (_, i) => {
                   const setProgress = currentExerciseProgress?.sets.find(s => s.setNumber === i + 1);
                   const isCompleted = setProgress?.completed || false;
@@ -603,6 +638,19 @@ export default function WorkoutMode() {
                     </div>
                   );
                 })}
+                
+                {/* Add Set Button */}
+                {currentExerciseProgress && currentExerciseProgress.sets.length < 12 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleAddSet}
+                    className="w-5 h-5 p-0 rounded-full text-white border-white/20 hover:bg-white/10 hover:border-white/30"
+                    data-testid="button-add-set"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                )}
               </div>
               
               <Button

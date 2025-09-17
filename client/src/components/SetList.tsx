@@ -210,21 +210,6 @@ export default function SetList({
           })}
         </div>
 
-        {/* Add Set Button */}
-        {sets.length < 12 && (
-          <div className="mt-4">
-            <Button
-              onClick={handleAddSet}
-              variant="outline"
-              size="sm"
-              className="w-full text-white border-white/20 hover:bg-white/10 hover:border-white/30"
-              data-testid="button-add-set"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Set
-            </Button>
-          </div>
-        )}
         
         {/* Template info */}
         {sets.length !== currentExercise.sets && (
