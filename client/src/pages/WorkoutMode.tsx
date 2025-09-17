@@ -489,8 +489,8 @@ export default function WorkoutMode() {
       </div>
 
       {/* 3. Set Progress Box Region */}
-      <div className="flex-1 px-4 pb-2 min-h-0" data-testid="set-progress">
-        <div className="h-full">
+      <div className="flex-none px-4 pb-2" data-testid="set-progress" style={{ maxHeight: '40vh' }}>
+        <div className="h-full max-h-full">
           {sessionStarted && currentExercise && sessionId ? (
             <SetList 
               sessionId={sessionId}
