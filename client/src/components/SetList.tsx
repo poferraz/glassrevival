@@ -69,8 +69,8 @@ export default function SetList({
   }, [workoutProgress, onProgressUpdate]);
 
   const handleSetChange = useCallback((setNumber: number, data: { reps: number; weight: number }) => {
-    // Update the set progress with new values
-    let updatedProgress = { ...currentExerciseProgress };
+    // Update the set progress with new values - use proper immutable updates
+    let updatedProgress = { ...currentExerciseProgress, sets: [...currentExerciseProgress.sets] };
     
     // Ensure we have enough set entries
     while (updatedProgress.sets.length < setNumber) {
@@ -111,7 +111,7 @@ export default function SetList({
   }, [currentExerciseProgress, currentExercise.unit, updateProgress]);
 
   const handleToggleComplete = useCallback((setNumber: number) => {
-    let updatedProgress = { ...currentExerciseProgress };
+    let updatedProgress = { ...currentExerciseProgress, sets: [...currentExerciseProgress.sets] };
     
     // Ensure we have enough set entries
     while (updatedProgress.sets.length < setNumber) {
@@ -139,7 +139,7 @@ export default function SetList({
       return;
     }
     
-    let updatedProgress = { ...currentExerciseProgress };
+    let updatedProgress = { ...currentExerciseProgress, sets: [...currentExerciseProgress.sets] };
     
     // Remove the set and renumber remaining sets
     const filteredSets = updatedProgress.sets
@@ -154,7 +154,7 @@ export default function SetList({
   }, [currentExerciseProgress, sets.length, updateProgress]);
 
   const handleAddSet = useCallback(() => {
-    let updatedProgress = { ...currentExerciseProgress };
+    let updatedProgress = { ...currentExerciseProgress, sets: [...currentExerciseProgress.sets] };
     
     // Create new set with default values
     const newSetNumber = sets.length + 1;

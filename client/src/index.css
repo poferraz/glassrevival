@@ -330,12 +330,22 @@
   .mobile-viewport {
     height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); /* fallback */
+    
+    /* Prevent height changes when keyboard opens */
+    min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); /* fallback */
   }
 
   .workout-mode-container {
     max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 4rem);
     max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 4rem); /* fallback */
     overflow-y: auto;
+    scroll-padding-top: 2rem;
+    -webkit-overflow-scrolling: touch;
+    
+    /* Maintain consistent height even when keyboard is open */
+    height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 4rem);
+    height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 4rem); /* fallback */
   }
 
   .set-list-container {
@@ -343,11 +353,29 @@
     max-height: calc(40vh - env(safe-area-inset-bottom)); /* fallback */
     overflow-y: auto;
     overflow-x: hidden;
+    scroll-padding-top: 1rem;
+    -webkit-overflow-scrolling: touch;
+    
+    /* Stable height for keyboard interactions */
+    min-height: 8rem;
+    
+    /* Improved scrolling on mobile */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .set-list-container::-webkit-scrollbar {
+    display: none;
   }
 
   .fixed-row-height {
     height: 4rem; /* 64px fixed height to prevent layout shifts */
     min-height: 4rem;
+  }
+
+  /* Scroll margin for SetRow elements to account for keyboard and header */
+  .scroll-margin-top {
+    scroll-margin-top: 6rem; /* Adjust for header and keyboard */
   }
 
   /* iOS safe area support */
@@ -365,10 +393,57 @@
     }
   }
 
-  /* Prevent zoom on iOS when input is focused */
+  /* iOS keyboard handling */
+  @supports (-webkit-touch-callout: none) {
+    /* Prevent viewport scaling on iOS when keyboard opens */
+    .workout-mode-container {
+      position: relative;
+      overflow-y: auto;
+      height: 100%;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Ensure set list container maintains proper scrolling */
+    .set-list-container {
+      position: relative;
+      -webkit-overflow-scrolling: touch;
+      scroll-padding-top: 4rem;
+    }
+    
+    /* Prevent zoom on input focus */
+    input[type="number"], input[type="text"], input[type="email"], input[type="tel"] {
+      font-size: 16px !important;
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+    }
+  }
+
+  /* Keyboard-aware scrolling behavior */
+  .keyboard-open {
+    /* Applied to body when keyboard is detected */
+    position: fixed;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Smooth scrolling for row visibility adjustments */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+  }
+
+  /* Prevent layout shifts during keyboard interactions */
+  .stable-layout {
+    contain: layout style;
+  }
+
+  /* Enhanced mobile input handling */
   @media screen and (-webkit-min-device-pixel-ratio: 0) {
     input[type="number"] {
       font-size: 16px;
+      /* Prevent iOS zoom while maintaining design */
+      -webkit-appearance: none;
+      border-radius: 0;
     }
   }
 }
