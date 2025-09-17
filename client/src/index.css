@@ -336,6 +336,23 @@
     min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); /* fallback */
   }
 
+  /* Safe area utilities */
+  .top-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .bottom-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pb-safe {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  .pt-safe {
+    padding-top: calc(1rem + env(safe-area-inset-top));
+  }
+
   .workout-mode-container {
     max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 4rem);
     max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 4rem); /* fallback */

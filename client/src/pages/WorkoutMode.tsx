@@ -25,10 +25,10 @@ import {
   createEmptySetProgress,
   createEmptyWorkoutProgress
 } from "@/utils/workoutHelpers";
-import Layout from "@/components/Layout";
 import GlassCard from "@/components/GlassCard";
 import SetList from "@/components/SetList";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
   Play, 
   Pause, 
@@ -42,6 +42,7 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Plus,
   Minus
 } from "lucide-react";
@@ -66,6 +67,8 @@ export default function WorkoutMode() {
   const [sessionStarted, setSessionStarted] = useState(false);
   const [sessionInstance, setSessionInstance] = useState<SessionInstance | ScheduledSession | null>(null);
   const [sessionNotFound, setSessionNotFound] = useState(false);
+  const [showFormGuidance, setShowFormGuidance] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
   
   // Handler for progress updates from SetList
   const handleProgressUpdate = useCallback((updatedProgress: WorkoutProgress[]) => {
@@ -346,41 +349,39 @@ export default function WorkoutMode() {
 
   if (!sessionId) {
     return (
-      <Layout>
+      <div className="mobile-viewport flex items-center justify-center bg-background px-4">
         <div className="p-4 text-center">
-          <p className="text-white">Invalid session ID</p>
+          <p className="text-foreground">Invalid session ID</p>
         </div>
-      </Layout>
+      </div>
     );
   }
   
   if (sessionNotFound) {
     return (
-      <Layout>
+      <div className="mobile-viewport flex items-center justify-center bg-background px-4">
         <div className="p-4 text-center">
-          <p className="text-white mb-4">Session not found</p>
+          <p className="text-foreground mb-4">Session not found</p>
           <Button onClick={() => navigate('/')}>Return to Calendar</Button>
         </div>
-      </Layout>
+      </div>
     );
   }
 
   if (!currentExercise) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <GlassCard variant="tertiary">
-            <div className="p-8 text-center">
-              <h2 className="text-lg font-semibold text-white mb-2">
-                Loading Workout...
-              </h2>
-              <p className="text-white/60">
-                Please wait while we load your workout data.
-              </p>
-            </div>
-          </GlassCard>
-        </div>
-      </Layout>
+      <div className="mobile-viewport flex items-center justify-center bg-background px-4">
+        <GlassCard variant="tertiary">
+          <div className="p-8 text-center">
+            <h2 className="text-lg font-semibold text-white mb-2">
+              Loading Workout...
+            </h2>
+            <p className="text-white/60">
+              Please wait while we load your workout data.
+            </p>
+          </div>
+        </GlassCard>
+      </div>
     );
   }
 
@@ -392,260 +393,309 @@ export default function WorkoutMode() {
 
   const currentSetProgress = currentExerciseProgress?.sets.find(s => s.setNumber === currentSetIndex + 1);
   const completedSets = calculateCompletedSets(currentExerciseProgress);
+  const overallProgress = Math.round(((currentExerciseIndex + (completedSets / currentExercise.sets)) / exercises.length) * 100);
 
   return (
-    <Layout>
-      <div className="workout-mode-container space-y-4">
-        {/* Workout Header */}
-        <GlassCard variant="secondary">
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={exitWorkout}
-                  className="text-white hover:text-white"
-                  data-testid="button-exit-workout"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </Button>
-                <div>
-                  <h1 className="text-lg font-bold text-white">
-                    Exercise {currentExerciseIndex + 1} of {exercises.length}
-                  </h1>
-                  <p className="text-sm text-white/60">
-                    Set {currentSetIndex + 1} of {currentExercise.sets}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="text-right">
-                <div className="text-sm text-white/60">Progress</div>
-                <div className="text-lg font-bold text-white">
-                  {Math.round(((currentExerciseIndex + (completedSets / currentExercise.sets)) / exercises.length) * 100)}%
-                </div>
-              </div>
-            </div>
+    <div className="mobile-viewport bg-background flex flex-col overflow-hidden">
+      {/* Exit Button - Top Left */}
+      <div className="absolute top-safe left-4 z-10">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={exitWorkout}
+          className="text-foreground hover:text-foreground"
+          data-testid="button-exit-workout"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </Button>
+      </div>
 
-            {/* Progress Bar */}
-            <div className="w-full bg-white/20 rounded-full h-2">
-              <div 
-                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                style={{ 
-                  width: `${((currentExerciseIndex + (completedSets / currentExercise.sets)) / exercises.length) * 100}%` 
-                }}
-              />
+      {/* 1. Progress Info Region */}
+      <div className="flex-none px-4 pt-16 pb-2" data-testid="progress-info">
+        <GlassCard variant="secondary" className="p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-sm text-white/80">
+              Exercise {currentExerciseIndex + 1} of {exercises.length}
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-white/60">Progress</div>
+              <div className="text-lg font-bold text-white">{overallProgress}%</div>
             </div>
           </div>
+          {/* Compact Progress Bar */}
+          <div className="w-full bg-white/20 rounded-full h-1.5">
+            <div 
+              className="bg-primary h-1.5 rounded-full transition-all duration-300"
+              style={{ width: `${overallProgress}%` }}
+            />
+          </div>
         </GlassCard>
+      </div>
 
-        {/* Current Exercise */}
-        <GlassCard variant="primary">
-          <div className="p-6 text-center">
-            <h2 className="text-2xl font-bold text-white mb-2" data-testid="current-exercise-name">
-              {currentExercise.name}
-            </h2>
+      {/* 2. Exercise Title Region */}
+      <div className="flex-none px-4 pb-2" data-testid="exercise-title">
+        <GlassCard variant="primary" className="p-4 text-center">
+          <h2 className="text-xl font-bold text-white mb-1" data-testid="current-exercise-name">
+            {currentExercise.name}
+          </h2>
+          <div className="text-sm text-blue-300">
+            {formatExercisePrescription(currentExercise)}
+            {currentExercise.weight && (
+              <span className="ml-2 text-white/60">
+                @ {formatWeight(currentExercise.weight)}
+              </span>
+            )}
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* 3. Set Progress Box Region */}
+      <div className="flex-1 px-4 pb-2 min-h-0" data-testid="set-progress">
+        <div className="h-full overflow-hidden">
+          {sessionStarted && currentExercise && sessionId ? (
+            <SetList 
+              sessionId={sessionId}
+              currentExercise={currentExercise}
+              workoutProgress={workoutProgress}
+              onProgressUpdate={(updatedProgress) => setWorkoutProgress(updatedProgress)}
+            />
+          ) : (
+            <GlassCard variant="tertiary" className="h-full flex items-center justify-center">
+              <div className="text-center p-8">
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  Ready to Start?
+                </h3>
+                <p className="text-white/60 text-sm">
+                  Set tracking will appear here once you begin your workout.
+                </p>
+              </div>
+            </GlassCard>
+          )}
+        </div>
+      </div>
+
+      {/* 4. Collapsed Panels Region */}
+      {(currentExercise.formGuidance || currentExercise.notes) && (
+        <div className="flex-none px-4 pb-2" data-testid="panels">
+          <div className="space-y-2">
+            {currentExercise.formGuidance && (
+              <Collapsible open={showFormGuidance} onOpenChange={setShowFormGuidance}>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-between text-white border-white/20 hover:bg-white/10"
+                    data-testid="button-toggle-form-guidance"
+                  >
+                    <span>Form Guidance</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+                      showFormGuidance ? 'rotate-180' : ''
+                    }`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-2">
+                  <GlassCard variant="tertiary" className="p-3">
+                    <div className="text-sm text-white/80">
+                      {currentExercise.formGuidance}
+                    </div>
+                  </GlassCard>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
             
-            <div className="text-lg text-blue-300 mb-4">
-              {formatExercisePrescription(currentExercise)}
-              {currentExercise.weight && (
-                <span className="ml-2 text-white/60">
-                  @ {formatWeight(currentExercise.weight)}
-                </span>
-              )}
-            </div>
-
-            {/* Set Status */}
-            <div className="flex justify-center gap-2 mb-6">
-              {Array.from({ length: currentExercise.sets }, (_, i) => {
-                const setProgress = currentExerciseProgress?.sets.find(s => s.setNumber === i + 1);
-                const isCompleted = setProgress?.completed || false;
-                const isCurrent = i === currentSetIndex;
-                
-                return (
-                  <div
-                    key={i}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                      isCompleted 
-                        ? 'bg-green-500 border-green-400 text-white'
-                        : isCurrent
-                        ? 'border-blue-400 text-blue-400'
-                        : 'border-white/30 text-white/50'
-                    }`}
-                  >
-                    {isCompleted ? (
-                      <CheckCircle className="w-4 h-4" />
-                    ) : (
-                      <span className="text-sm font-bold">{i + 1}</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Form Guidance & Notes */}
-            {(currentExercise.formGuidance || currentExercise.notes) && (
-              <div className="bg-white/10 rounded-lg p-4 mb-6 text-left">
-                {currentExercise.formGuidance && (
-                  <div className="mb-2">
-                    <div className="text-sm font-medium text-blue-300">Form Guidance:</div>
-                    <div className="text-sm text-white/80">{currentExercise.formGuidance}</div>
-                  </div>
-                )}
-                {currentExercise.notes && (
-                  <div>
-                    <div className="text-sm font-medium text-yellow-300">Notes:</div>
-                    <div className="text-sm text-white/80">{currentExercise.notes}</div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Set List Interface */}
-            {sessionStarted && currentExercise && sessionId && (
-              <SetList 
-                sessionId={sessionId}
-                currentExercise={currentExercise}
-                workoutProgress={workoutProgress}
-                onProgressUpdate={(updatedProgress) => setWorkoutProgress(updatedProgress)}
-              />
-            )}
-
-            {/* Action Buttons */}
-            {!sessionStarted ? (
-              <Button
-                size="lg"
-                variant="default"
-                onClick={startWorkout}
-                className="w-full max-w-sm"
-                data-testid="button-start-workout"
-              >
-                <Play className="w-5 h-5 mr-2" />
-                Start Workout
-              </Button>
-            ) : (
-              <div className="space-y-4">
-                <Button
-                  size="lg"
-                  variant="default"
-                  onClick={completeSet}
-                  className="w-full max-w-sm"
-                  data-testid="button-complete-set"
-                >
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  Complete Set {currentSetIndex + 1}
-                </Button>
-                
-                <div className="flex gap-2 justify-center">
+            {currentExercise.notes && (
+              <Collapsible open={showNotes} onOpenChange={setShowNotes}>
+                <CollapsibleTrigger asChild>
                   <Button
-                    size="sm"
                     variant="outline"
-                    onClick={previousExercise}
-                    disabled={currentExerciseIndex === 0}
-                    className="text-white border-white/20 hover:bg-white/10"
-                    data-testid="button-previous-exercise"
-                  >
-                    <SkipBack className="w-4 h-4" />
-                  </Button>
-                  <Button
                     size="sm"
-                    variant="outline"
-                    onClick={nextExercise}
-                    disabled={currentExerciseIndex >= exercises.length - 1}
-                    className="text-white border-white/20 hover:bg-white/10"
-                    data-testid="button-next-exercise"
+                    className="w-full justify-between text-white border-white/20 hover:bg-white/10"
+                    data-testid="button-toggle-notes"
                   >
-                    <SkipForward className="w-4 h-4" />
+                    <span>Notes</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+                      showNotes ? 'rotate-180' : ''
+                    }`} />
                   </Button>
-                </div>
-              </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-2">
+                  <GlassCard variant="tertiary" className="p-3">
+                    <div className="text-sm text-white/80">
+                      {currentExercise.notes}
+                    </div>
+                  </GlassCard>
+                </CollapsibleContent>
+              </Collapsible>
             )}
           </div>
-        </GlassCard>
+        </div>
+      )}
 
-        {/* Timer Section */}
-        {sessionStarted && (
-          <GlassCard variant="tertiary">
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-white">Timer</h3>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant={timerType === 'rest' ? 'default' : 'outline'}
-                    onClick={startRestTimer}
-                    className="text-white border-white/20 hover:bg-white/10"
-                    data-testid="button-rest-timer"
-                  >
-                    <Timer className="w-4 h-4 mr-1" />
-                    Rest ({formatRestTime(getRestDuration())})
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={timerType === 'stopwatch' ? 'default' : 'outline'}
-                    onClick={startStopwatch}
-                    className="text-white border-white/20 hover:bg-white/10"
-                    data-testid="button-stopwatch"
-                  >
-                    <Clock className="w-4 h-4 mr-1" />
-                    Stopwatch
-                  </Button>
-                </div>
-              </div>
-
-              {timerType && (
-                <div className="text-center">
-                  <div className="text-3xl font-mono font-bold text-white mb-4">
-                    {formatTimerDisplay(timerSeconds)}
-                  </div>
-                  <div className="flex justify-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={toggleTimer}
-                      className="text-white border-white/20 hover:bg-white/10"
-                      data-testid="button-toggle-timer"
-                    >
-                      {isTimerRunning ? (
-                        <>
-                          <Pause className="w-4 h-4 mr-1" />
-                          Pause
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4 mr-1" />
-                          Start
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={resetTimer}
-                      className="text-white border-white/20 hover:bg-white/10"
-                      data-testid="button-reset-timer"
-                    >
-                      <RotateCcw className="w-4 h-4 mr-1" />
-                      Reset
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={stopTimer}
-                      className="text-white border-white/20 hover:bg-white/10"
-                      data-testid="button-stop-timer"
-                    >
-                      <Square className="w-4 h-4 mr-1" />
-                      Stop
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </GlassCard>
+      {/* 5. Complete Button Region */}
+      <div className="flex-none px-4 pb-2" data-testid="complete">
+        {!sessionStarted ? (
+          <Button
+            size="lg"
+            variant="default"
+            onClick={startWorkout}
+            className="w-full"
+            data-testid="button-start-workout"
+          >
+            <Play className="w-5 h-5 mr-2" />
+            Start Workout
+          </Button>
+        ) : (
+          <Button
+            size="lg"
+            variant="default"
+            onClick={completeSet}
+            className="w-full"
+            data-testid="button-complete-set"
+          >
+            <CheckCircle className="w-5 h-5 mr-2" />
+            Complete Set {currentSetIndex + 1}
+          </Button>
         )}
       </div>
-    </Layout>
+
+      {/* 6. Navigation Region */}
+      {sessionStarted && (
+        <div className="flex-none px-4 pb-2" data-testid="navigation">
+          <GlassCard variant="secondary" className="p-3">
+            <div className="flex items-center justify-between">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={previousExercise}
+                disabled={currentExerciseIndex === 0}
+                className="text-white border-white/20 hover:bg-white/10"
+                data-testid="button-previous-exercise"
+              >
+                <SkipBack className="w-4 h-4 mr-1" />
+                Prev
+              </Button>
+              
+              {/* Set Status Indicators */}
+              <div className="flex gap-1">
+                {Array.from({ length: currentExercise.sets }, (_, i) => {
+                  const setProgress = currentExerciseProgress?.sets.find(s => s.setNumber === i + 1);
+                  const isCompleted = setProgress?.completed || false;
+                  const isCurrent = i === currentSetIndex;
+                  
+                  return (
+                    <div
+                      key={i}
+                      className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                        isCompleted 
+                          ? 'bg-green-500 text-white'
+                          : isCurrent
+                          ? 'bg-primary text-white'
+                          : 'bg-white/20 text-white/50'
+                      }`}
+                    >
+                      {isCompleted ? '✓' : i + 1}
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={nextExercise}
+                disabled={currentExerciseIndex >= exercises.length - 1}
+                className="text-white border-white/20 hover:bg-white/10"
+                data-testid="button-next-exercise"
+              >
+                Next
+                <SkipForward className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </GlassCard>
+        </div>
+      )}
+
+      {/* 7. Timer Box Region - Pinned at Bottom */}
+      {sessionStarted && (
+        <div className="flex-none px-4 pb-safe" data-testid="timer">
+          <GlassCard variant="tertiary" className="p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-white">Timer</h3>
+              <div className="flex gap-1">
+                <Button
+                  size="sm"
+                  variant={timerType === 'rest' ? 'default' : 'outline'}
+                  onClick={startRestTimer}
+                  className="text-xs px-2 py-1 text-white border-white/20 hover:bg-white/10"
+                  data-testid="button-rest-timer"
+                >
+                  <Timer className="w-3 h-3 mr-1" />
+                  Rest
+                </Button>
+                <Button
+                  size="sm"
+                  variant={timerType === 'stopwatch' ? 'default' : 'outline'}
+                  onClick={startStopwatch}
+                  className="text-xs px-2 py-1 text-white border-white/20 hover:bg-white/10"
+                  data-testid="button-stopwatch"
+                >
+                  <Clock className="w-3 h-3 mr-1" />
+                  Stopwatch
+                </Button>
+              </div>
+            </div>
+
+            {timerType && (
+              <div className="text-center">
+                <div className="text-2xl font-mono font-bold text-white mb-2">
+                  {formatTimerDisplay(timerSeconds)}
+                </div>
+                <div className="flex justify-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={toggleTimer}
+                    className="text-xs px-2 py-1 text-white border-white/20 hover:bg-white/10"
+                    data-testid="button-toggle-timer"
+                  >
+                    {isTimerRunning ? (
+                      <>
+                        <Pause className="w-3 h-3 mr-1" />
+                        Pause
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3 h-3 mr-1" />
+                        Start
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={resetTimer}
+                    className="text-xs px-2 py-1 text-white border-white/20 hover:bg-white/10"
+                    data-testid="button-reset-timer"
+                  >
+                    <RotateCcw className="w-3 h-3 mr-1" />
+                    Reset
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={stopTimer}
+                    className="text-xs px-2 py-1 text-white border-white/20 hover:bg-white/10"
+                    data-testid="button-stop-timer"
+                  >
+                    <Square className="w-3 h-3 mr-1" />
+                    Stop
+                  </Button>
+                </div>
+              </div>
+            )}
+          </GlassCard>
+        </div>
+      )}
+    </div>
   );
 }
