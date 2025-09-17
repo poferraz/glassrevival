@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { SessionTemplate } from "@shared/schema";
 import { 
@@ -11,6 +11,7 @@ import {
 } from "@/utils/sessionStorage";
 import { loadWorkoutData } from "@/utils/storage";
 import { estimateSessionDuration, generateUniqueId } from "@/utils/workoutHelpers";
+import { parseTrainingCSV } from "@/utils/trainingCsvParser";
 import Layout from "@/components/Layout";
 import GlassCard from "@/components/GlassCard";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ export default function Sessions() {
   const [allTags, setAllTags] = useState<string[]>([]);
   const [showUseDialog, setShowUseDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<SessionTemplate | null>(null);
+  const trainingFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadData();
@@ -111,6 +113,46 @@ export default function Sessions() {
     }
   };
 
+  const handleImportTrainingCSV = () => {
+    if (trainingFileInputRef.current) {
+      trainingFileInputRef.current.click();
+    }
+  };
+
+  const handleTrainingFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const content = await file.text();
+      const result = parseTrainingCSV(content);
+      
+      if (result.errors.length > 0) {
+        console.error('CSV parsing errors:', result.errors);
+        alert(`Import failed with errors:\n${result.errors.join('\n')}`);
+        return;
+      }
+
+      // Save each session template
+      result.sessions.forEach(template => {
+        saveSessionTemplate(template);
+      });
+
+      loadData();
+      console.log(`Successfully imported ${result.sessions.length} training sessions from CSV`);
+      alert(`Successfully imported ${result.sessions.length} training sessions!`);
+      
+    } catch (error) {
+      console.error('Failed to import training CSV:', error);
+      alert(`Failed to import training CSV: ${error}`);
+    }
+
+    // Reset file input
+    if (trainingFileInputRef.current) {
+      trainingFileInputRef.current.value = '';
+    }
+  };
+
   const handleUseTemplate = (template: SessionTemplate) => {
     setSelectedTemplate(template);
     setShowUseDialog(true);
@@ -175,12 +217,22 @@ export default function Sessions() {
                 <Button
                   size="sm"
                   variant="outline"
+                  onClick={handleImportTrainingCSV}
+                  className="text-white border-white/20 hover:bg-white/10"
+                  data-testid="button-import-training-csv"
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  Import Training CSV
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={handleImportFromCSV}
                   className="text-white border-white/20 hover:bg-white/10"
                   data-testid="button-import-csv"
                 >
                   <Upload className="w-4 h-4 mr-1" />
-                  Import from CSV
+                  Import Legacy CSV
                 </Button>
                 <Button
                   size="sm"
@@ -493,6 +545,16 @@ export default function Sessions() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Hidden file input for training CSV import */}
+        <input
+          ref={trainingFileInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleTrainingFileSelect}
+          style={{ display: 'none' }}
+          data-testid="input-training-csv-file"
+        />
       </div>
     </Layout>
   );
