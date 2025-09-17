@@ -1,0 +1,87 @@
+You are a senior front end engineer working inside my Replit project. Make focused, small commits. Do not change the overall workout mode layout, only the reps, sets, weight area and the screen fit behavior.
+
+Role
+Implement an in place, touch friendly reps, sets, weight cluster that fits on a single mobile screen with no scrolling. Target iPhone sixteen Pro viewport first.
+
+Goals
+1 Fit the entire workout mode on one screen with no scrolling, including timers, title block, set list, and primary actions.
+2 Replace the current reps or sets or weight UI with a unified cluster that shows values in read state and becomes editable on tap.
+3 Keep all existing workout features and data flow intact.
+
+Hard rules
+1 Never remove or break existing workout logic or data shapes.
+2 No new global state. Reuse current context and types.
+3 If any requirement is unclear, list Open Questions and stop.
+
+UX spec
+1 Read state
+a Each set is a row showing set index, reps value, weight value, and a completion toggle.
+b Values appear as large, high contrast text. Example: Set 1, Reps 10, Weight 0 kg.
+c Tapping the reps value or the weight value switches that cell to edit state.
+2 Edit state
+a Inline numeric input with mobile number keypad for reps and weight. Use inputmode numeric and pattern for digits and an optional decimal for weight.
+b Provide plus and minus steppers beside the input. Single tap adjusts by one. Press and hold repeats.
+c Enter saves on blur, Enter, or tapping a check icon. Escape or outside tap cancels and restores the prior value.
+d When editing, keep the row height fixed. Do not push content below the fold.
+3 Add or remove sets
+a Add Set appears as a compact row at the end. Tapping adds a row with default values from the exercise.
+b Remove is available from a three dots menu on each row and asks for confirm.
+4 Completion
+a Each set row keeps its existing completion toggle. If reps or weight changes while a set is completed, clear the completion flag for that row to avoid stale data.
+5 Per side labeling
+a If the exercise has per side or per leg, show a tiny label under the reps value in read state. Edit state keeps the label visible but non interactive.
+
+Layout spec for true one screen fit
+1 Use dynamic viewport units. Height is calc of 100 dvh minus safe area top and bottom minus the app header.
+2 Make the central content a column with three fixed regions
+a Top bar and title block compact
+b Set list uses a fixed max height that ensures the primary buttons are always visible
+c Bottom action bar pinned above the safe area bottom
+3 Provide a single line progress indicator that never grows in height.
+4 When the software keyboard opens, never cause the whole screen to scroll. Only the active row may offset by a few pixels to stay visible.
+
+Component contract
+Create SetRow that receives
+1 index number
+2 reps number
+3 weight number
+4 completed boolean
+5 onChange payload with reps and weight
+6 onToggleComplete
+7 onRemove
+Create SetList that receives the array of SetRow props and exposes onAddSet.
+
+Data and storage
+1 Reuse the current scheduled exercise structure and set array.
+2 Keep units exactly as the app expects now. If the exercise uses lb or kg, respect it. Do not introduce conversion here.
+3 Persist edits immediately through the existing dispatch that updates the scheduled item. Do not change reducer names.
+
+Accessibility
+1 All interactive elements have aria labels and clear focus styles.
+2 Completion toggle is reachable by keyboard and screen reader.
+3 Inputs use required, min, max where appropriate.
+
+Performance
+1 No re renders of the entire screen when a single cell changes. Memoize SetRow. Update by id.
+2 Avoid layout thrash. Fixed row heights and CSS transforms for focus transitions.
+
+Files to touch
+1 SetRow component new
+2 SetList component new
+3 WorkoutMode screen, replace the current reps or sets or weight block with SetList
+4 Small CSS module or tailwind utilities for fixed heights and safe area padding
+
+Step plan
+1 Inventory current workout mode props, state shape, and reducer actions that touch sets and weights. Output a short summary and Open Questions if any.
+2 Add SetRow and SetList with static sample data and verify one screen fit with dvh and safe area rules.
+3 Wire SetList to real data, implement in place edit, plus steppers, and completion toggle.
+4 Implement Add Set and Remove with confirm. Reset completion flags when values change.
+5 Ensure keyboard handling keeps the row visible without scrolling the full screen.
+6 Replace the old reps or sets or weight block with the new SetList. Keep everything else unchanged.
+
+Acceptance tests
+1 On an iPhone sixteen Pro size, the entire screen fits with no scrolling in read state and edit state.
+2 Tapping reps or weight reveals inline edit with a number keypad. Saving updates the row, cancel restores it.
+3 Adding and removing sets works and never causes the primary buttons to move off screen.
+4 Changing reps or weight on a completed set clears that set’s completion flag.
+5 Reloading the app shows all edits persisted exactly as before, with no changes to unrelated features.
