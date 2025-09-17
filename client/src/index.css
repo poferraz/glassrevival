@@ -325,4 +325,50 @@
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
   }
+
+  /* Mobile viewport and safe area handling for one screen fit */
+  .mobile-viewport {
+    height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); /* fallback */
+  }
+
+  .workout-mode-container {
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 4rem);
+    max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 4rem); /* fallback */
+    overflow-y: auto;
+  }
+
+  .set-list-container {
+    max-height: calc(40dvh - env(safe-area-inset-bottom));
+    max-height: calc(40vh - env(safe-area-inset-bottom)); /* fallback */
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .fixed-row-height {
+    height: 4rem; /* 64px fixed height to prevent layout shifts */
+    min-height: 4rem;
+  }
+
+  /* iOS safe area support */
+  @supports (padding: env(safe-area-inset-top)) {
+    .mobile-viewport {
+      height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    }
+    
+    .workout-mode-container {
+      max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 4rem);
+    }
+    
+    .set-list-container {
+      max-height: calc(40dvh - env(safe-area-inset-bottom));
+    }
+  }
+
+  /* Prevent zoom on iOS when input is focused */
+  @media screen and (-webkit-min-device-pixel-ratio: 0) {
+    input[type="number"] {
+      font-size: 16px;
+    }
+  }
 }

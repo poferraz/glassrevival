@@ -27,6 +27,7 @@ import {
 } from "@/utils/workoutHelpers";
 import Layout from "@/components/Layout";
 import GlassCard from "@/components/GlassCard";
+import SetList from "@/components/SetList";
 import { Button } from "@/components/ui/button";
 import { 
   Play, 
@@ -439,7 +440,7 @@ export default function WorkoutMode() {
 
   return (
     <Layout>
-      <div className="space-y-4">
+      <div className="workout-mode-container space-y-4">
         {/* Workout Header */}
         <GlassCard variant="secondary">
           <div className="p-4">
@@ -546,126 +547,9 @@ export default function WorkoutMode() {
               </div>
             )}
 
-            {/* Set Editing Interface */}
+            {/* Set List Interface */}
             {sessionStarted && (
-              <GlassCard variant="tertiary" className="mb-6">
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-white mb-4 text-center">
-                    Set {currentSetIndex + 1} Details
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    {/* Main Exercise Input (Reps/Time/Steps) */}
-                    <div>
-                      <label className="block text-sm font-medium text-white/80 mb-2">
-                        {currentExercise.unit === 'reps' && 'Reps Performed'}
-                        {currentExercise.unit === 'seconds' && 'Time (seconds)'}
-                        {currentExercise.unit === 'steps' && 'Steps'}
-                      </label>
-                      
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => decrementValue(
-                            currentExercise.unit === 'reps' ? 'reps' :
-                            currentExercise.unit === 'seconds' ? 'timeSeconds' : 'steps'
-                          )}
-                          className="text-white border-white/20 hover:bg-white/10 shrink-0"
-                          data-testid="button-decrement-main"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </Button>
-                        
-                        <Input
-                          type="number"
-                          inputMode="numeric"
-                          value={
-                            currentExercise.unit === 'reps' ? currentSetInputs.reps :
-                            currentExercise.unit === 'seconds' ? currentSetInputs.timeSeconds : 
-                            currentSetInputs.steps
-                          }
-                          onChange={(e) => updateSetInput(
-                            currentExercise.unit === 'reps' ? 'reps' :
-                            currentExercise.unit === 'seconds' ? 'timeSeconds' : 'steps',
-                            parseInt(e.target.value) || 0
-                          )}
-                          className="text-center text-lg font-semibold bg-white/10 border-white/20 text-white placeholder:text-white/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          data-testid="input-main-value"
-                        />
-                        
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => incrementValue(
-                            currentExercise.unit === 'reps' ? 'reps' :
-                            currentExercise.unit === 'seconds' ? 'timeSeconds' : 'steps'
-                          )}
-                          className="text-white border-white/20 hover:bg-white/10 shrink-0"
-                          data-testid="button-increment-main"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      
-                      {/* Show target vs actual */}
-                      <div className="text-center text-sm text-white/60 mt-1">
-                        Target: {formatExercisePrescription(currentExercise)}
-                      </div>
-                    </div>
-                    
-                    {/* Weight Input */}
-                    <div>
-                      <label className="block text-sm font-medium text-white/80 mb-2">
-                        Weight (kg)
-                        {currentExercise.weight && (
-                          <span className="text-white/60 ml-1">
-                            (template: {formatWeight(currentExercise.weight)})
-                          </span>
-                        )}
-                      </label>
-                      
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => decrementValue('weight', 2.5)}
-                          className="text-white border-white/20 hover:bg-white/10 shrink-0"
-                          data-testid="button-decrement-weight"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </Button>
-                        
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          step="0.5"
-                          min="0"
-                          value={currentSetInputs.weight}
-                          onChange={(e) => updateSetInput('weight', parseFloat(e.target.value) || 0)}
-                          className="text-center text-lg font-semibold bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                          placeholder="0"
-                          data-testid="input-weight"
-                        />
-                        
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => incrementValue('weight', 2.5)}
-                          className="text-white border-white/20 hover:bg-white/10 shrink-0"
-                          data-testid="button-increment-weight"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      
-                      <div className="text-center text-xs text-white/50 mt-1">
-                        Use +/- for 2.5kg increments
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </GlassCard>
+              <SetList />
             )}
 
             {/* Action Buttons */}
