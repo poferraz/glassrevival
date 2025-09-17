@@ -397,40 +397,45 @@ export default function WorkoutMode() {
 
   return (
     <div className="mobile-viewport bg-background flex flex-col overflow-hidden">
-      {/* Exit Button - Top Left */}
-      <div className="absolute top-safe left-4 z-10">
-        <GlassCard 
-          variant="secondary" 
-          onClick={exitWorkout}
-          className="w-10 h-10 flex items-center justify-center cursor-pointer"
-        >
-          <ChevronLeft 
-            className="w-5 h-5 text-white" 
-            data-testid="button-exit-workout" 
-          />
-        </GlassCard>
-      </div>
-
-      {/* 1. Progress Info Region */}
-      <div className="flex-none px-4 pt-16 pb-2" data-testid="progress-info">
-        <GlassCard variant="secondary" className="p-3">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm text-white/80">
-              Exercise {currentExerciseIndex + 1} of {exercises.length}
-            </div>
-            <div className="text-right">
-              <div className="text-xs text-white/60">Progress</div>
-              <div className="text-lg font-bold text-white">{overallProgress}%</div>
-            </div>
+      {/* 1. Progress Info Region with Exit Button */}
+      <div className="flex-none px-4 pt-safe pb-2" data-testid="progress-info">
+        <div className="flex items-center gap-3">
+          {/* Exit Button on left side */}
+          <div className="flex-none">
+            <GlassCard 
+              variant="secondary" 
+              onClick={exitWorkout}
+              className="w-10 h-10 flex items-center justify-center cursor-pointer"
+            >
+              <ChevronLeft 
+                className="w-5 h-5 text-white" 
+                data-testid="button-exit-workout" 
+              />
+            </GlassCard>
           </div>
-          {/* Compact Progress Bar */}
-          <div className="w-full bg-white/20 rounded-full h-1.5">
-            <div 
-              className="bg-primary h-1.5 rounded-full transition-all duration-300"
-              style={{ width: `${overallProgress}%` }}
-            />
+          
+          {/* Progress box taking remaining space */}
+          <div className="flex-1">
+            <GlassCard variant="secondary" className="p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm text-white/80">
+                  Exercise {currentExerciseIndex + 1} of {exercises.length}
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-white/60">Progress</div>
+                  <div className="text-lg font-bold text-white">{overallProgress}%</div>
+                </div>
+              </div>
+              {/* Compact Progress Bar */}
+              <div className="w-full bg-white/20 rounded-full h-1.5">
+                <div 
+                  className="bg-primary h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: `${overallProgress}%` }}
+                />
+              </div>
+            </GlassCard>
           </div>
-        </GlassCard>
+        </div>
       </div>
 
       {/* 2. Exercise Title Region */}
