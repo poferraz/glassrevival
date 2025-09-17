@@ -16,6 +16,9 @@ import Layout from "@/components/Layout";
 import GlassCard from "@/components/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { 
   Plus, 
   LibraryBig, 
@@ -37,6 +40,14 @@ export default function Sessions() {
   const [allTags, setAllTags] = useState<string[]>([]);
   const [showUseDialog, setShowUseDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<SessionTemplate | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<SessionTemplate | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    tags: [] as string[],
+    newTag: ''
+  });
   const trainingFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -178,6 +189,60 @@ export default function Sessions() {
     navigate('/');
     setShowUseDialog(false);
     console.log('Navigate to calendar to schedule session');
+  };
+
+  const handleEditTemplate = (template: SessionTemplate) => {
+    setEditingTemplate(template);
+    setEditForm({
+      name: template.name,
+      description: template.description || '',
+      tags: [...template.tags],
+      newTag: ''
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingTemplate) return;
+    
+    const updatedTemplate: SessionTemplate = {
+      ...editingTemplate,
+      name: editForm.name.trim(),
+      description: editForm.description.trim() || undefined,
+      tags: editForm.tags,
+      updatedAt: new Date().toISOString()
+    };
+    
+    saveSessionTemplate(updatedTemplate);
+    loadData();
+    setShowEditDialog(false);
+    setEditingTemplate(null);
+    console.log('Session template updated:', updatedTemplate.name);
+  };
+
+  const handleAddTag = () => {
+    const newTag = editForm.newTag.trim();
+    if (newTag && !editForm.tags.includes(newTag)) {
+      setEditForm(prev => ({
+        ...prev,
+        tags: [...prev.tags, newTag],
+        newTag: ''
+      }));
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }));
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
   };
 
   const filteredTemplates = sessionTemplates.filter(template => {
@@ -365,6 +430,7 @@ export default function Sessions() {
                       <Button
                         size="icon"
                         variant="ghost"
+                        onClick={() => handleEditTemplate(template)}
                         className="w-8 h-8 text-white/60 hover:text-white"
                         data-testid={`button-edit-${template.id}`}
                       >
@@ -540,6 +606,133 @@ export default function Sessions() {
                   onClick={() => setShowUseDialog(false)}
                 >
                   Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Template Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="bg-gray-900/95 border-white/20 text-white max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-white">Edit Template: {editingTemplate?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              {editingTemplate && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="template-name" className="text-white/80">
+                      Template Name
+                    </Label>
+                    <Input
+                      id="template-name"
+                      type="text"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Enter template name"
+                      className="bg-white/10 border-white/20 text-white placeholder-white/50"
+                      data-testid="input-edit-template-name"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="template-description" className="text-white/80">
+                      Description (optional)
+                    </Label>
+                    <Textarea
+                      id="template-description"
+                      value={editForm.description}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Enter template description"
+                      className="bg-white/10 border-white/20 text-white placeholder-white/50"
+                      rows={3}
+                      data-testid="textarea-edit-template-description"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-white/80">Tags</Label>
+                    
+                    {/* Existing tags */}
+                    {editForm.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {editForm.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-600/20 border border-blue-500/30 text-blue-200 rounded-full"
+                          >
+                            {tag}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveTag(tag)}
+                              className="hover:text-red-300 transition-colors"
+                              data-testid={`button-remove-tag-${index}`}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Add new tag */}
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        value={editForm.newTag}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, newTag: e.target.value }))}
+                        onKeyPress={handleKeyPress}
+                        placeholder="Add a tag"
+                        className="bg-white/10 border-white/20 text-white placeholder-white/50 flex-1"
+                        data-testid="input-add-tag"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleAddTag}
+                        disabled={!editForm.newTag.trim() || editForm.tags.includes(editForm.newTag.trim())}
+                        className="px-3"
+                        data-testid="button-add-tag"
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="p-3 bg-white/5 rounded-lg border border-white/10">
+                    <div className="flex items-center gap-4 text-sm text-white/60">
+                      <div className="flex items-center gap-1">
+                        <Target className="w-3 h-3" />
+                        <span>{editingTemplate.exercises.length} exercises</span>
+                      </div>
+                      {editingTemplate.estimatedDurationMinutes && (
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>{editingTemplate.estimatedDurationMinutes}min</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEditDialog(false)}
+                  className="flex-1 text-white border-white/20 hover:bg-white/10"
+                  data-testid="button-cancel-edit"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveEdit}
+                  disabled={!editForm.name.trim()}
+                  className="flex-1"
+                  data-testid="button-save-edit"
+                >
+                  Save Changes
                 </Button>
               </div>
             </div>

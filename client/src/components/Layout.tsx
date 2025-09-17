@@ -108,39 +108,39 @@ export default function Layout({ children, className }: LayoutProps) {
           <div className="fixed inset-x-4 top-20 z-40 md:hidden animate-slide-up">
             <GlassCard variant="primary">
               <div className="p-4 space-y-3">
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start text-white hover:text-white"
-                  onClick={() => {
-                    setShowMenu(false);
-                    console.log('Navigate to workouts');
-                  }}
-                  data-testid="nav-workouts"
-                >
-                  My Workouts
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start text-white hover:text-white"
-                  onClick={() => {
-                    setShowMenu(false);
-                    console.log('Navigate to import');
-                  }}
-                  data-testid="nav-import"
-                >
-                  Import CSV
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start text-white hover:text-white"
-                  onClick={() => {
-                    setShowMenu(false);
-                    console.log('Navigate to settings');
-                  }}
-                  data-testid="nav-settings"
-                >
-                  Settings
-                </Button>
+                <Link href="/sessions">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-white hover:text-white"
+                    onClick={() => setShowMenu(false)}
+                    data-testid="nav-workouts"
+                  >
+                    <LibraryBig className="w-4 h-4 mr-2" />
+                    My Workouts
+                  </Button>
+                </Link>
+                <Link href="/import">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-white hover:text-white"
+                    onClick={() => setShowMenu(false)}
+                    data-testid="nav-import"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import CSV
+                  </Button>
+                </Link>
+                <Link href="/">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-white hover:text-white"
+                    onClick={() => setShowMenu(false)}
+                    data-testid="nav-calendar"
+                  >
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Calendar
+                  </Button>
+                </Link>
               </div>
             </GlassCard>
           </div>
