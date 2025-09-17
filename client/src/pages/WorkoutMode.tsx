@@ -382,7 +382,7 @@ export default function WorkoutMode() {
 
   if (!sessionId) {
     return (
-      <div className="mobile-viewport flex items-center justify-center bg-background px-4">
+      <div className="flex flex-col h-dvh min-h-0 bg-background items-center justify-center px-4">
         <div className="p-4 text-center">
           <p className="text-foreground">Invalid session ID</p>
         </div>
@@ -392,7 +392,7 @@ export default function WorkoutMode() {
   
   if (sessionNotFound) {
     return (
-      <div className="mobile-viewport flex items-center justify-center bg-background px-4">
+      <div className="flex flex-col h-dvh min-h-0 bg-background items-center justify-center px-4">
         <div className="p-4 text-center">
           <p className="text-foreground mb-4">Session not found</p>
           <Button onClick={() => navigate('/')}>Return to Calendar</Button>
@@ -403,7 +403,7 @@ export default function WorkoutMode() {
 
   if (!currentExercise) {
     return (
-      <div className="mobile-viewport flex items-center justify-center bg-background px-4">
+      <div className="flex flex-col h-dvh min-h-0 bg-background items-center justify-center px-4">
         <GlassCard variant="tertiary">
           <div className="p-8 text-center">
             <h2 className="text-lg font-semibold text-white mb-2">
@@ -428,8 +428,12 @@ export default function WorkoutMode() {
   const completedSets = calculateCompletedSets(currentExerciseProgress);
   const overallProgress = Math.round(((currentExerciseIndex + (completedSets / currentExercise.sets)) / exercises.length) * 100);
 
+  // Calculate conditional max-height for Set Progress based on panel state
+  const arePanelsOpen = showFormGuidance || showNotes;
+  const setProgressMaxHeight = arePanelsOpen ? 'max-h-[32dvh]' : 'max-h-[48dvh]';
+
   return (
-    <div className="mobile-viewport bg-background flex flex-col overflow-hidden">
+    <div className="flex flex-col h-dvh min-h-0 bg-background">
       {/* 1. Progress Info Region with Exit Button */}
       <div className="flex-none px-4 pt-safe pb-2" data-testid="progress-info">
         <div className="flex items-stretch gap-3">
@@ -471,104 +475,107 @@ export default function WorkoutMode() {
         </div>
       </div>
 
-      {/* 2. Exercise Title Region */}
-      <div className="flex-none px-4 pb-2" data-testid="exercise-title">
-        <GlassCard variant="primary" className="p-4 text-center">
-          <h2 className="text-xl font-bold text-white mb-1" data-testid="current-exercise-name">
-            {currentExercise.name}
-          </h2>
-          <div className="text-sm text-blue-300">
-            {currentExercise.muscleGroup}
-            {currentExercise.mainMuscle && currentExercise.mainMuscle !== currentExercise.muscleGroup && (
-              <span className="ml-2 text-white/60">
-                • {currentExercise.mainMuscle}
-              </span>
-            )}
-          </div>
-        </GlassCard>
-      </div>
-
-      {/* 3. Set Progress Box Region */}
-      <div className="flex-none px-4 pb-2" data-testid="set-progress" style={{ maxHeight: '40vh' }}>
-        <div className="h-full max-h-full">
-          {sessionStarted && currentExercise && sessionId ? (
-            <SetList 
-              sessionId={sessionId}
-              currentExercise={currentExercise}
-              workoutProgress={workoutProgress}
-              onProgressUpdate={(updatedProgress) => setWorkoutProgress(updatedProgress)}
-            />
-          ) : (
-            <GlassCard variant="tertiary" className="h-full flex items-center justify-center">
-              <div className="text-center p-8">
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  Ready to Start?
-                </h3>
-                <p className="text-white/60 text-sm">
-                  Set tracking will appear here once you begin your workout.
-                </p>
-              </div>
-            </GlassCard>
-          )}
+      {/* Middle Content Container - Title + SetList + Panels */}
+      <div className="flex flex-col flex-1 min-h-0">
+        {/* 2. Exercise Title Region */}
+        <div className="flex-none px-4 pb-2" data-testid="exercise-title">
+          <GlassCard variant="primary" className="p-4 text-center">
+            <h2 className="text-xl font-bold text-white mb-1" data-testid="current-exercise-name">
+              {currentExercise.name}
+            </h2>
+            <div className="text-sm text-blue-300">
+              {currentExercise.muscleGroup}
+              {currentExercise.mainMuscle && currentExercise.mainMuscle !== currentExercise.muscleGroup && (
+                <span className="ml-2 text-white/60">
+                  • {currentExercise.mainMuscle}
+                </span>
+              )}
+            </div>
+          </GlassCard>
         </div>
-      </div>
 
-      {/* 4. Collapsed Panels Region */}
-      {(currentExercise.formGuidance || currentExercise.notes) && (
-        <div className="flex-none px-4 pb-2" data-testid="panels">
-          <div className="space-y-2">
-            {currentExercise.formGuidance && (
-              <Collapsible open={showFormGuidance} onOpenChange={setShowFormGuidance}>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-between text-white border-white/20 hover:bg-white/10"
-                    data-testid="button-toggle-form-guidance"
-                  >
-                    <span>Form Guidance</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
-                      showFormGuidance ? 'rotate-180' : ''
-                    }`} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-2">
-                  <GlassCard variant="tertiary" className="p-3">
-                    <div className="text-sm text-white/80">
-                      {currentExercise.formGuidance}
-                    </div>
-                  </GlassCard>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-            
-            {currentExercise.notes && (
-              <Collapsible open={showNotes} onOpenChange={setShowNotes}>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-between text-white border-white/20 hover:bg-white/10"
-                    data-testid="button-toggle-notes"
-                  >
-                    <span>Notes</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
-                      showNotes ? 'rotate-180' : ''
-                    }`} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-2">
-                  <GlassCard variant="tertiary" className="p-3">
-                    <div className="text-sm text-white/80">
-                      {currentExercise.notes}
-                    </div>
-                  </GlassCard>
-                </CollapsibleContent>
-              </Collapsible>
+        {/* 3. Set Progress Box Region */}
+        <div className={`flex-none px-4 pb-2 ${setProgressMaxHeight} overflow-y-auto`} data-testid="set-progress">
+          <div className="h-full">
+            {sessionStarted && currentExercise && sessionId ? (
+              <SetList 
+                sessionId={sessionId}
+                currentExercise={currentExercise}
+                workoutProgress={workoutProgress}
+                onProgressUpdate={(updatedProgress) => setWorkoutProgress(updatedProgress)}
+              />
+            ) : (
+              <GlassCard variant="tertiary" className="h-full flex items-center justify-center">
+                <div className="text-center p-8">
+                  <h3 className="text-lg font-semibold text-white mb-2">
+                    Ready to Start?
+                  </h3>
+                  <p className="text-white/60 text-sm">
+                    Set tracking will appear here once you begin your workout.
+                  </p>
+                </div>
+              </GlassCard>
             )}
           </div>
         </div>
-      )}
+
+        {/* 4. Collapsed Panels Region */}
+        {(currentExercise.formGuidance || currentExercise.notes) && (
+          <div className="flex-none px-4 pb-2" data-testid="panels">
+            <div className="space-y-2">
+              {currentExercise.formGuidance && (
+                <Collapsible open={showFormGuidance} onOpenChange={setShowFormGuidance}>
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-between text-white border-white/20 hover:bg-white/10"
+                      data-testid="button-toggle-form-guidance"
+                    >
+                      <span>Form Guidance</span>
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+                        showFormGuidance ? 'rotate-180' : ''
+                      }`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-2">
+                    <GlassCard variant="tertiary" className="p-3">
+                      <div className="text-sm text-white/80">
+                        {currentExercise.formGuidance}
+                      </div>
+                    </GlassCard>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+              
+              {currentExercise.notes && (
+                <Collapsible open={showNotes} onOpenChange={setShowNotes}>
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-between text-white border-white/20 hover:bg-white/10"
+                      data-testid="button-toggle-notes"
+                    >
+                      <span>Notes</span>
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+                        showNotes ? 'rotate-180' : ''
+                      }`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-2">
+                    <GlassCard variant="tertiary" className="p-3">
+                      <div className="text-sm text-white/80">
+                        {currentExercise.notes}
+                      </div>
+                    </GlassCard>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* 5. Complete Button Region */}
       <div className="flex-none px-4 pb-2" data-testid="complete">
