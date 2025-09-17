@@ -343,7 +343,7 @@ export default function WorkoutMode() {
   const exitWorkout = () => {
     if (confirm('Are you sure you want to exit this workout? Your progress will be saved.')) {
       clearActiveWorkoutState();
-      // Navigate back
+      navigate('/');
     }
   };
 
@@ -439,10 +439,10 @@ export default function WorkoutMode() {
             {currentExercise.name}
           </h2>
           <div className="text-sm text-blue-300">
-            {formatExercisePrescription(currentExercise)}
-            {currentExercise.weight && (
+            {currentExercise.muscleGroup}
+            {currentExercise.mainMuscle && currentExercise.mainMuscle !== currentExercise.muscleGroup && (
               <span className="ml-2 text-white/60">
-                @ {formatWeight(currentExercise.weight)}
+                • {currentExercise.mainMuscle}
               </span>
             )}
           </div>

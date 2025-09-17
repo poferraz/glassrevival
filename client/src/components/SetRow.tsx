@@ -148,138 +148,42 @@ export const SetRow = memo(function SetRow({
   return (
     <div 
       ref={rowRef}
-      className="fixed-row-height bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 scroll-margin-top"
+      className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 scroll-margin-top"
     >
-      <div className="flex items-center justify-between h-full">
-        {/* Completion Toggle */}
+      {/* Top Row - Always horizontal: Completion Toggle, Set Index, Actions Menu */}
+      <div className="flex items-center justify-between mb-3">
+        {/* Completion Toggle - Larger for mobile */}
         <Button
-          size="icon"
+          size="default"
           variant="ghost"
           onClick={onToggleComplete}
-          className="shrink-0 text-white hover:bg-white/10"
+          className="shrink-0 text-white hover:bg-white/10 min-h-10 min-w-10 p-0"
           aria-label={`${completed ? 'Mark incomplete' : 'Mark complete'} set ${index}`}
           data-testid={`button-toggle-complete-${index}`}
         >
           {completed ? (
-            <CheckCircle className="w-6 h-6 text-green-400" />
+            <CheckCircle className="w-7 h-7 text-green-400" />
           ) : (
-            <Circle className="w-6 h-6" />
+            <Circle className="w-7 h-7" />
           )}
         </Button>
 
         {/* Set Index */}
-        <div className="text-lg font-semibold text-white min-w-[3rem] text-center" data-testid={`text-set-index-${index}`}>
+        <div className="text-xl font-semibold text-white" data-testid={`text-set-index-${index}`}>
           Set {index}
         </div>
 
-        {/* Reps Display/Edit */}
-        <div className="flex-1 min-w-0 mx-4">
-          {editState.isEditing === 'reps' ? (
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => decrementValue('reps')}
-                className="text-white border-white/20 hover:bg-white/10 shrink-0"
-                data-testid={`button-decrement-${unit}-${index}`}
-              >
-                <Minus className="w-3 h-3" />
-              </Button>
-              
-              <Input
-                ref={repsInputRef}
-                type="number"
-                inputMode="numeric"
-                value={currentReps}
-                onChange={(e) => updateEditValue('reps', parseInt(e.target.value) || 0)}
-                onBlur={finishEditing}
-                onKeyDown={(e) => handleKeyDown(e, 'reps')}
-                className="text-center text-lg font-semibold bg-white/10 border-white/20 text-white min-h-9 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                data-testid={`input-${unit}-${index}`}
-              />
-              
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => incrementValue('reps')}
-                className="text-white border-white/20 hover:bg-white/10 shrink-0"
-                data-testid={`button-increment-${unit}-${index}`}
-              >
-                <Plus className="w-3 h-3" />
-              </Button>
-            </div>
-          ) : (
-            <button
-              onClick={() => startEditing('reps')}
-              className="text-lg font-bold text-white hover:text-blue-300 transition-colors w-full text-center min-h-[2rem] flex items-center justify-center"
-              aria-label={`Edit ${unit === 'reps' ? 'reps' : unit === 'seconds' ? 'seconds' : 'steps'} for set ${index}, currently ${currentReps}`}
-              data-testid={`button-edit-${unit}-${index}`}
-            >
-              {currentReps} {unit === 'reps' ? (perSide ? 'reps per side' : 'reps') : unit === 'seconds' ? 's' : 'steps'}
-            </button>
-          )}
-        </div>
-
-        {/* Weight Display/Edit */}
-        <div className="flex-1 min-w-0 mx-4">
-          {editState.isEditing === 'weight' ? (
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => decrementValue('weight')}
-                className="text-white border-white/20 hover:bg-white/10 shrink-0"
-                data-testid={`button-decrement-weight-${index}`}
-              >
-                <Minus className="w-3 h-3" />
-              </Button>
-              
-              <Input
-                ref={weightInputRef}
-                type="number"
-                inputMode="decimal"
-                step="0.5"
-                value={currentWeight}
-                onChange={(e) => updateEditValue('weight', parseFloat(e.target.value) || 0)}
-                onBlur={finishEditing}
-                onKeyDown={(e) => handleKeyDown(e, 'weight')}
-                className="text-center text-lg font-semibold bg-white/10 border-white/20 text-white min-h-9"
-                data-testid={`input-weight-${index}`}
-              />
-              
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => incrementValue('weight')}
-                className="text-white border-white/20 hover:bg-white/10 shrink-0"
-                data-testid={`button-increment-weight-${index}`}
-              >
-                <Plus className="w-3 h-3" />
-              </Button>
-            </div>
-          ) : (
-            <button
-              onClick={() => startEditing('weight')}
-              className="text-lg font-bold text-white hover:text-blue-300 transition-colors w-full text-center min-h-[2rem] flex items-center justify-center"
-              aria-label={`Edit weight for set ${index}, currently ${currentWeight} kg`}
-              data-testid={`button-edit-weight-${index}`}
-            >
-              {currentWeight} kg
-            </button>
-          )}
-        </div>
-
-        {/* Actions Menu */}
+        {/* Actions Menu - Larger for mobile */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              size="icon"
+              size="default"
               variant="ghost"
-              className="shrink-0 text-white hover:bg-white/10"
+              className="shrink-0 text-white hover:bg-white/10 min-h-10 min-w-10 p-0"
               aria-label={`More actions for set ${index}`}
               data-testid={`button-more-actions-${index}`}
             >
-              <MoreHorizontal className="w-4 h-4" />
+              <MoreHorizontal className="w-5 h-5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-white/10 backdrop-blur-md border-white/20">
@@ -293,6 +197,112 @@ export const SetRow = memo(function SetRow({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+      </div>
+
+      {/* Main Content - Mobile-friendly stacked layout */}
+      <div className="space-y-4">
+        {/* Reps Display/Edit */}
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-white/80 text-center">
+            {unit === 'reps' ? (perSide ? 'Reps per side' : 'Reps') : unit === 'seconds' ? 'Duration' : 'Steps'}
+          </div>
+          {editState.isEditing === 'reps' ? (
+            <div className="flex items-center gap-3">
+              <Button
+                size="default"
+                variant="outline"
+                onClick={() => decrementValue('reps')}
+                className="text-white border-white/20 hover:bg-white/10 shrink-0 min-h-12 min-w-12 p-0"
+                data-testid={`button-decrement-${unit}-${index}`}
+              >
+                <Minus className="w-5 h-5" />
+              </Button>
+              
+              <Input
+                ref={repsInputRef}
+                type="number"
+                inputMode="numeric"
+                value={currentReps}
+                onChange={(e) => updateEditValue('reps', parseInt(e.target.value) || 0)}
+                onBlur={finishEditing}
+                onKeyDown={(e) => handleKeyDown(e, 'reps')}
+                className="text-center text-2xl font-bold bg-white/10 border-white/20 text-white min-h-14 rounded-xl [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                data-testid={`input-${unit}-${index}`}
+              />
+              
+              <Button
+                size="default"
+                variant="outline"
+                onClick={() => incrementValue('reps')}
+                className="text-white border-white/20 hover:bg-white/10 shrink-0 min-h-12 min-w-12 p-0"
+                data-testid={`button-increment-${unit}-${index}`}
+              >
+                <Plus className="w-5 h-5" />
+              </Button>
+            </div>
+          ) : (
+            <button
+              onClick={() => startEditing('reps')}
+              className="text-2xl font-bold text-white hover:text-blue-300 transition-colors w-full text-center min-h-14 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-xl border border-white/10"
+              aria-label={`Edit ${unit === 'reps' ? 'reps' : unit === 'seconds' ? 'seconds' : 'steps'} for set ${index}, currently ${currentReps}`}
+              data-testid={`button-edit-${unit}-${index}`}
+            >
+              {currentReps} {unit === 'seconds' ? 's' : ''}
+            </button>
+          )}
+        </div>
+
+        {/* Weight Display/Edit */}
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-white/80 text-center">
+            Weight
+          </div>
+          {editState.isEditing === 'weight' ? (
+            <div className="flex items-center gap-3">
+              <Button
+                size="default"
+                variant="outline"
+                onClick={() => decrementValue('weight')}
+                className="text-white border-white/20 hover:bg-white/10 shrink-0 min-h-12 min-w-12 p-0"
+                data-testid={`button-decrement-weight-${index}`}
+              >
+                <Minus className="w-5 h-5" />
+              </Button>
+              
+              <Input
+                ref={weightInputRef}
+                type="number"
+                inputMode="decimal"
+                step="0.5"
+                value={currentWeight}
+                onChange={(e) => updateEditValue('weight', parseFloat(e.target.value) || 0)}
+                onBlur={finishEditing}
+                onKeyDown={(e) => handleKeyDown(e, 'weight')}
+                className="text-center text-2xl font-bold bg-white/10 border-white/20 text-white min-h-14 rounded-xl"
+                data-testid={`input-weight-${index}`}
+              />
+              
+              <Button
+                size="default"
+                variant="outline"
+                onClick={() => incrementValue('weight')}
+                className="text-white border-white/20 hover:bg-white/10 shrink-0 min-h-12 min-w-12 p-0"
+                data-testid={`button-increment-weight-${index}`}
+              >
+                <Plus className="w-5 h-5" />
+              </Button>
+            </div>
+          ) : (
+            <button
+              onClick={() => startEditing('weight')}
+              className="text-2xl font-bold text-white hover:text-blue-300 transition-colors w-full text-center min-h-14 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-xl border border-white/10"
+              aria-label={`Edit weight for set ${index}, currently ${currentWeight} kg`}
+              data-testid={`button-edit-weight-${index}`}
+            >
+              {currentWeight} kg
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
