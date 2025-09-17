@@ -376,10 +376,8 @@ export default function WorkoutMode() {
   };
 
   const exitWorkout = () => {
-    if (confirm('Are you sure you want to exit this workout? Your progress will be saved.')) {
-      clearActiveWorkoutState();
-      navigate('/');
-    }
+    clearActiveWorkoutState();
+    navigate('/');
   };
 
   if (!sessionId) {
