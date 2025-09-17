@@ -399,17 +399,17 @@ export default function WorkoutMode() {
     <div className="mobile-viewport bg-background flex flex-col overflow-hidden">
       {/* 1. Progress Info Region with Exit Button */}
       <div className="flex-none px-4 pt-safe pb-2" data-testid="progress-info">
-        <div className="flex items-center gap-3">
+        <div className="flex items-stretch gap-3">
           {/* Exit Button on left side */}
-          <div className="flex-none">
+          <div className="flex-none self-stretch">
             <GlassCard 
               variant="secondary" 
               onClick={exitWorkout}
-              className="w-12 h-full flex items-center justify-center cursor-pointer bg-red-500/30 border-red-500/40 backdrop-blur-lg"
+              className="w-12 h-full flex items-center justify-center cursor-pointer bg-destructive/20 border-destructive/40 text-destructive-foreground backdrop-blur-md"
+              data-testid="button-exit-workout"
             >
               <ChevronLeft 
-                className="w-5 h-5 text-white" 
-                data-testid="button-exit-workout" 
+                className="w-5 h-5" 
               />
             </GlassCard>
           </div>
