@@ -457,7 +457,7 @@ export default function WorkoutMode() {
 
       {/* 3. Set Progress Box Region */}
       <div className="flex-1 px-4 pb-2 min-h-0" data-testid="set-progress">
-        <div className="h-full overflow-hidden">
+        <div className="h-full">
           {sessionStarted && currentExercise && sessionId ? (
             <SetList 
               sessionId={sessionId}
