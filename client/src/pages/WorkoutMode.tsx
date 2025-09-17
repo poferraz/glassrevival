@@ -399,15 +399,16 @@ export default function WorkoutMode() {
     <div className="mobile-viewport bg-background flex flex-col overflow-hidden">
       {/* Exit Button - Top Left */}
       <div className="absolute top-safe left-4 z-10">
-        <Button
-          size="icon"
-          variant="ghost"
+        <GlassCard 
+          variant="secondary" 
           onClick={exitWorkout}
-          className="text-foreground hover:text-foreground"
-          data-testid="button-exit-workout"
+          className="w-10 h-10 flex items-center justify-center cursor-pointer"
         >
-          <ChevronLeft className="w-5 h-5" />
-        </Button>
+          <ChevronLeft 
+            className="w-5 h-5 text-white" 
+            data-testid="button-exit-workout" 
+          />
+        </GlassCard>
       </div>
 
       {/* 1. Progress Info Region */}

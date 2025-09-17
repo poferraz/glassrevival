@@ -366,8 +366,8 @@
   }
 
   .set-list-container {
-    max-height: calc(40dvh - env(safe-area-inset-bottom));
-    max-height: calc(40vh - env(safe-area-inset-bottom)); /* fallback */
+    max-height: calc(25dvh - env(safe-area-inset-bottom));
+    max-height: calc(25vh - env(safe-area-inset-bottom)); /* fallback */
     overflow-y: auto;
     overflow-x: hidden;
     scroll-padding-top: 1rem;
@@ -406,7 +406,7 @@
     }
     
     .set-list-container {
-      max-height: calc(40dvh - env(safe-area-inset-bottom));
+      max-height: calc(25dvh - env(safe-area-inset-bottom));
     }
   }
 
