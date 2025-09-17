@@ -1,0 +1,65 @@
+You are a senior front end engineer working inside my Replit project. Make focused, small commits with clear messages. Keep all existing workout logic and data shapes unchanged.
+
+Goal
+Refactor Workout Mode so its content appears in this exact top to bottom order and always fits on an iPhone 16 Pro without vertical scrolling in read or edit states.
+
+Exact Content Order
+| Order | Region name | Required elements |
+| 1 | Progress info | step indicator and overall progress percent |
+| 2 | Exercise title | exercise name and rep target text |
+| 3 | Set progress box | list of sets with inline read to edit for reps and weight and a completion toggle per set and an Add Set control |
+| 4 | Collapsed panels | Form Guidance collapsed by default and Notes collapsed by default |
+| 5 | Complete button | primary action for the current exercise or current session step |
+| 6 | Navigation | Prev and Next controls for exercises and a compact progress line |
+| 7 | Timer box | Countdown control and Stopwatch control in a single fixed bar |
+
+Mobile fit and layout rules
+| Topic | Requirement |
+| Viewport | Use 100dvh with safe area insets so nothing hides behind device bars |
+| Column layout | One column stack matching the order table above using fixed regions where needed |
+| Set list height | Fixed max height so primary actions and timer box remain visible when the keyboard opens |
+| Keyboard behavior | Only the active set row shifts slightly if needed and primary actions never move off screen |
+| Tap targets | Minimum 44 by 44 logical points |
+| Typography | Scale so all regions fit on iPhone 16 Pro in both read and edit states |
+
+Inline edit for sets
+| State | Behavior |
+| Read | each set row shows index and reps and weight and a completion toggle |
+| Edit | tapping reps or weight turns that cell into a numeric input with inputmode numeric and steppers and Save and Cancel affordances without changing row height |
+| Persistence | edits dispatch to the existing reducer and clear the completion flag for that row if reps or weight changes |
+
+Component contracts
+| Component | Contract |
+| SetRow | props index and reps and weight and completed and onChange and onToggleComplete and onRemove and fixed row height |
+| SetList | receives array of SetRow props and exposes onAddSet and enforces max height to guarantee fit |
+| WorkoutMode | composes regions in the required order and pins the timer box at the bottom using safe area padding |
+
+Accessibility and performance
+| Area | Requirement |
+| A11y | aria labels on all controls and visible focus rings and logical tab order that follows the content order |
+| Render | memoize SetRow so changing one cell does not re render the entire screen |
+
+Acceptance tests
+| Check | Pass condition |
+| Content order | DOM order exactly matches the seven row table above and data test ids exist for each region as test id progress info and test id exercise title and test id set progress and test id panels and test id complete and test id navigation and test id timer |
+| Fit read state | On iPhone 16 Pro in Replit preview there is no vertical scroll and all seven regions are visible |
+| Fit edit state | Editing reps or weight keeps all seven regions visible and the keyboard does not cover the Complete button or the Timer box |
+| Set edit flow | Change reps then Save updates state and clears completion for that set and Cancel restores prior values |
+| Add remove sets | Add Set appends a row within the fixed list height and Remove asks for confirm and never pushes primary actions off screen |
+
+Step plan
+1 Inventory current Workout Mode layout and list the files and reducers that touch set state and confirm existing test ids if any
+2 Implement SetRow and SetList with fixed heights and wire to current state and dispatch
+3 Reorder Workout Mode to match the table and add safe area and 100dvh container and a pinned Timer box
+4 Implement keyboard handling and verify no full screen scroll in edit
+5 Run acceptance tests and report any residual fit issues
+
+Key Improvements:
+• Explicit top to bottom order with test ids
+• Concrete viewport and keyboard rules to guarantee true one screen fit
+• Clear inline edit behavior that does not shift layout
+• Acceptance tests that validate both order and fit
+
+Techniques Applied: constraint based UI spec, idempotent refactor, accessibility first, performance mindful row memoization
+
+Pro Tip: Add a quick Cypress or Playwright check that asserts the seven test ids appear in that exact order and that window innerHeight equals document documentElement clientHeight in both read and edit states.
