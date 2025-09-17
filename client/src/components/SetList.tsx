@@ -12,13 +12,15 @@ interface SetListProps {
   currentExercise: SessionExercise;
   workoutProgress: WorkoutProgress[];
   onProgressUpdate: (updatedProgress: WorkoutProgress[]) => void;
+  isPanelsOpen?: boolean;
 }
 
 export default function SetList({ 
   sessionId, 
   currentExercise, 
   workoutProgress, 
-  onProgressUpdate 
+  onProgressUpdate,
+  isPanelsOpen = false
 }: SetListProps) {
   // Get current exercise progress or create empty one
   const currentExerciseProgress = useMemo(() => {
@@ -177,6 +179,9 @@ export default function SetList({
     updateProgress(updatedProgress);
   }, [currentExerciseProgress, sets.length, currentExercise, updateProgress]);
 
+  // Apply conditional max-height based on panel state
+  const containerMaxHeight = isPanelsOpen ? 'max-h-[32dvh]' : 'max-h-[48dvh]';
+
   return (
     <GlassCard variant="tertiary" className="overflow-hidden">
       <div className="p-4">
@@ -184,8 +189,8 @@ export default function SetList({
           Set Progress
         </h3>
         
-        {/* Sets Container with max height for mobile viewport */}
-        <div className="set-list-container space-y-3 mb-4">
+        {/* Sets Container - Scrollable list with height constraints */}
+        <div className={`set-list-container divide-y divide-white/10 mb-4 overflow-y-auto ${containerMaxHeight}`}>
           {sets.map((set) => {
             const displayValue = currentExercise.unit === 'reps' ? 
               (set.setProgress.reps ?? set.defaultReps) :
@@ -210,6 +215,16 @@ export default function SetList({
           })}
         </div>
 
+        {/* Add Set Button */}
+        <Button
+          onClick={handleAddSet}
+          variant="outline"
+          className="w-full text-white border-white/20 hover:bg-white/10"
+          data-testid="button-add-set"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Set
+        </Button>
         
         {/* Template info */}
         {sets.length !== currentExercise.sets && (

@@ -503,6 +503,7 @@ export default function WorkoutMode() {
                 currentExercise={currentExercise}
                 workoutProgress={workoutProgress}
                 onProgressUpdate={(updatedProgress) => setWorkoutProgress(updatedProgress)}
+                isPanelsOpen={showFormGuidance || showNotes}
               />
             ) : (
               <GlassCard variant="tertiary" className="h-full flex items-center justify-center">
