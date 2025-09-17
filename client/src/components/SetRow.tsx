@@ -121,21 +121,21 @@ export const SetRow = memo(function SetRow({
   useEffect(() => {
     if (editState.isEditing === 'reps' && repsInputRef.current) {
       repsInputRef.current.focus();
-      // Smooth scroll to keep the row visible above keyboard
+      // Smooth scroll to keep the row visible above keyboard within the constrained container
       setTimeout(() => {
         rowRef.current?.scrollIntoView({
           behavior: 'smooth',
-          block: 'center',
+          block: 'nearest', // More conservative - scrolls within container only if needed
           inline: 'nearest'
         });
       }, 100);
     } else if (editState.isEditing === 'weight' && weightInputRef.current) {
       weightInputRef.current.focus();
-      // Smooth scroll to keep the row visible above keyboard
+      // Smooth scroll to keep the row visible above keyboard within the constrained container
       setTimeout(() => {
         rowRef.current?.scrollIntoView({
           behavior: 'smooth',
-          block: 'center',
+          block: 'nearest', // More conservative - scrolls within container only if needed
           inline: 'nearest'
         });
       }, 100);
