@@ -13,6 +13,7 @@ import {
   clearActiveWorkoutState,
   ActiveWorkoutState
 } from "@/utils/sessionStorage";
+import { useWorkoutTimer, loadTimerState } from "@/hooks/useWorkoutTimer";
 import { 
   formatExercisePrescription, 
   formatWeight, 
@@ -61,9 +62,6 @@ export default function WorkoutMode() {
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [exercises, setExercises] = useState<SessionExercise[]>([]);
   const [workoutProgress, setWorkoutProgress] = useState<WorkoutProgress[]>([]);
-  const [timerType, setTimerType] = useState<'rest' | 'stopwatch' | null>(null);
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [sessionInstance, setSessionInstance] = useState<SessionInstance | null>(null);
   const [sessionNotFound, setSessionNotFound] = useState(false);
@@ -71,12 +69,23 @@ export default function WorkoutMode() {
   const [showNotes, setShowNotes] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
   
+  // Timer management via custom hook
+  const {
+    timerType,
+    timerSeconds,
+    isTimerRunning,
+    startRestTimer,
+    startStopwatch,
+    stopTimer,
+    toggleTimer,
+    resetTimer
+  } = useWorkoutTimer();
+  
   // Handler for progress updates from SetList
   const handleProgressUpdate = useCallback((updatedProgress: WorkoutProgress[]) => {
     setWorkoutProgress(updatedProgress);
   }, []);
   
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -90,19 +99,9 @@ export default function WorkoutMode() {
       setCurrentSetIndex(activeState.currentSetIndex);
       setSessionStarted(true);
       
+      // Restore timer state using hook utility
       if (activeState.timerState) {
-        setTimerType(activeState.timerState.type);
-        setIsTimerRunning(activeState.timerState.isRunning);
-        if (activeState.timerState.isRunning) {
-          const elapsed = Date.now() - activeState.timerState.startTime;
-          if (activeState.timerState.type === 'rest' && activeState.timerState.duration) {
-            setTimerSeconds(Math.max(0, activeState.timerState.duration - Math.floor(elapsed / 1000)));
-          } else {
-            setTimerSeconds(Math.floor(elapsed / 1000));
-          }
-        } else {
-          setTimerSeconds(activeState.timerState.duration || 0);
-        }
+        loadTimerState(activeState.timerState);
       }
     }
 
@@ -146,31 +145,7 @@ export default function WorkoutMode() {
     }
   }, [sessionId, currentExerciseIndex, currentSetIndex, timerType, timerSeconds, isTimerRunning, sessionStarted]);
 
-  useEffect(() => {
-    if (isTimerRunning && timerRef.current === null) {
-      timerRef.current = setInterval(() => {
-        setTimerSeconds(prev => {
-          if (timerType === 'rest' && prev <= 1) {
-            // Rest timer finished
-            setIsTimerRunning(false);
-            setTimerType(null);
-            return 0;
-          }
-          return timerType === 'rest' ? prev - 1 : prev + 1;
-        });
-      }, 1000);
-    } else if (!isTimerRunning && timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-  }, [isTimerRunning, timerType]);
+  // Timer logic is now handled by useWorkoutTimer hook
 
   const currentExercise = exercises[currentExerciseIndex];
 
@@ -280,37 +255,15 @@ export default function WorkoutMode() {
   const getRestDuration = (): number => {
     return currentExercise?.restSeconds || 60;
   };
-
-  const startRestTimer = () => {
-    const duration = getRestDuration();
-    setTimerType('rest');
-    setTimerSeconds(duration);
-    setIsTimerRunning(true);
+  // Wrapper functions to use timer hook with exercise-specific rest duration
+  const handleStartRestTimer = () => {
+    const duration = currentExercise?.restSeconds || 60;
+    startRestTimer(duration);
   };
 
-  const startStopwatch = () => {
-    setTimerType('stopwatch');
-    setTimerSeconds(0);
-    setIsTimerRunning(true);
-  };
-
-  const stopTimer = () => {
-    setIsTimerRunning(false);
-    setTimerType(null);
-    setTimerSeconds(0);
-  };
-
-  const toggleTimer = () => {
-    setIsTimerRunning(prev => !prev);
-  };
-
-  const resetTimer = () => {
-    if (timerType === 'rest') {
-      setTimerSeconds(getRestDuration());
-    } else {
-      setTimerSeconds(0);
-    }
-    setIsTimerRunning(false);
+  const handleResetTimer = () => {
+    const duration = currentExercise?.restSeconds || 60;
+    resetTimer(duration);
   };
 
   const updateSessionStatus = (status: 'in_progress' | 'completed' | 'skipped') => {
@@ -683,7 +636,7 @@ export default function WorkoutMode() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setTimerType(timerType === 'rest' ? null : 'rest')}
+                      onClick={() => timerType === 'rest' ? stopTimer() : handleStartRestTimer()}
                       className={`text-xs px-2 py-1 ${
                         timerType === 'rest' 
                           ? 'bg-blue-500/20 border-blue-500/40 text-blue-400' 
@@ -696,7 +649,7 @@ export default function WorkoutMode() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setTimerType(timerType === 'stopwatch' ? null : 'stopwatch')}
+                      onClick={() => timerType === 'stopwatch' ? stopTimer() : startStopwatch()}
                       className={`text-xs px-2 py-1 ${
                         timerType === 'stopwatch' 
                           ? 'bg-green-500/20 border-green-500/40 text-green-400' 
@@ -710,7 +663,7 @@ export default function WorkoutMode() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setIsTimerRunning(!isTimerRunning)}
+                        onClick={toggleTimer}
                         className="text-xs px-2 py-1 text-white border-white/20 hover:bg-white/10"
                         data-testid="button-timer-toggle"
                       >
