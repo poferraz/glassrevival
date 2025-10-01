@@ -1,0 +1,312 @@
+# Codebase Review Report
+
+## Repo map
+
+**Core Application Files:**
+- `client/src/App.tsx` - Main app router with wouter, handles routing to Calendar, Sessions, WorkoutMode, Import
+- `client/src/main.tsx` - React app entry point
+- `client/index.html` - HTML shell with viewport-fit=cover for mobile
+
+**Page Components:**
+- `client/src/pages/Calendar.tsx` - Calendar view with session scheduling and day navigation
+- `client/src/pages/Sessions.tsx` - Session template management ("My Workouts" page)
+- `client/src/pages/WorkoutMode.tsx` - Active workout interface with 7-region layout
+- `client/src/pages/Home.tsx` - CSV import page with demo workout functionality
+
+**Core Workout Components:**
+- `client/src/components/Layout.tsx` - App shell with navigation, glass morphism background
+- `client/src/components/SetList.tsx` - Scrollable set tracking component for workout mode
+- `client/src/components/SetRow.tsx` - Individual set editing with numeric keypad and steppers
+- `client/src/components/GlassCard.tsx` - Glass morphism UI component (not examined but referenced)
+
+**Data Layer:**
+- `shared/schema.ts` - TypeScript types and Zod schemas for sessions, exercises, progress
+- `client/src/utils/sessionStorage.ts` - LocalStorage persistence for templates, instances, progress
+- `client/src/utils/workoutHelpers.ts` - Utility functions for workout calculations (not examined but referenced)
+
+**CSV Import System:**
+- `client/src/utils/trainingCsvParser.ts` - Parses training CSV into SessionTemplate format
+- `client/src/utils/csvParser.ts` - Legacy CSV parser (not examined but referenced)
+- `client/src/components/CSVUpload.tsx` - File upload component (not examined but referenced)
+
+**Styling:**
+- `client/src/index.css` - Global CSS with mobile viewport utilities, safe area handling
+- `tailwind.config.ts` - Tailwind config with glass morphism colors and mobile utilities
+
+## Architecture
+
+**Data Flow:**
+- Templates → Session Instances → Workout Progress: Templates are created/imported, scheduled as instances, then tracked with progress data
+- LocalStorage-based persistence with separate keys for templates, instances, and progress
+- Migration system exists to convert legacy ScheduledSessions to new SessionInstance format
+
+**State Management:**
+- No global state management (Redux/Zustand) - uses React useState and localStorage
+- WorkoutMode maintains local state for current exercise/set indices and timer state
+- Progress updates flow: SetRow → SetList → WorkoutMode → sessionStorage utils
+- Active workout state persisted to localStorage for session resumption
+
+**Storage Architecture:**
+- `fittracker_session_templates` - SessionTemplate objects with exercises
+- `fittracker_session_instances` - SessionInstance objects with template snapshots
+- `fittracker_workout_progress` - WorkoutProgress arrays keyed by sessionId+exerciseId
+- `fittracker_active_workout` - Current workout state for resumption
+
+**Component Hierarchy:**
+- App → Router → Pages (Calendar/Sessions/WorkoutMode/Home)
+- Layout wraps all pages with navigation and glass background
+- WorkoutMode → SetList → SetRow for workout tracking
+- Heavy use of compound components with prop drilling for state management
+
+## UI and layout
+
+**Workout Mode Layout Analysis:**
+✅ **Correct 7-region order implemented:**
+1. Progress info (with exit button) - `data-testid="progress-info"`
+2. Exercise title - `data-testid="exercise-title"`
+3. Set progress box - `data-testid="set-progress"`
+4. Form and Notes collapsed panels - `data-testid="panels"`
+5. Complete button - `data-testid="complete"`
+6. Navigation - `data-testid="navigation"`
+7. Timer box - `data-testid="timer"`
+
+**Mobile Layout Compliance:**
+✅ Uses `h-dvh` and `min-h-0` for proper viewport handling
+✅ Safe area insets implemented with `pt-safe`, `pb-safe` utilities
+✅ SetList has conditional max-height: `max-h-[48dvh]` normally, `max-h-[32dvh]` when panels open
+⚠️ **Issue**: Set list uses fixed max-heights but should use calculated heights to ensure primary actions stay visible
+
+**Glass Morphism Implementation:**
+✅ Proper backdrop-blur and transparency throughout
+✅ GlassCard variants (primary, secondary, tertiary) consistently used
+✅ White/black overlays with proper alpha values
+
+**Responsive Design:**
+✅ Mobile-first approach with proper breakpoints
+✅ Grid layouts adapt to screen size
+⚠️ Desktop navigation exists but mobile experience is prioritized
+
+## Accessibility
+
+**Focus Management:**
+⚠️ **Issues Found:**
+- SetRow edit dialog auto-focuses first input, but no focus return management
+- Modal close doesn't return focus to trigger element
+- No visible focus rings on custom glass components
+- Navigation items lack proper focus indicators
+
+**ARIA Labels:**
+✅ **Good practices:**
+- SetRow buttons have proper aria-labels with set numbers
+- Toggle buttons describe current state ("Mark complete/incomplete")
+⚠️ **Missing:**
+- Form sections lack fieldset/legend structure
+- Set list lacks proper list semantics
+- Timer controls missing aria-live regions
+
+**Hit Targets:**
+⚠️ **Issues:**
+- Some icon buttons are 32px (8 w-8 h-8) which is below 44px minimum
+- Stepper buttons in SetRow are adequate (48px minimum)
+- Calendar day buttons may be too small on mobile
+
+**Keyboard Navigation:**
+✅ Enter/Escape keys work in SetRow edit dialog
+⚠️ Arrow key navigation not implemented for set lists
+⚠️ Tab order may not follow visual order in complex layouts
+
+## Performance
+
+**Re-render Analysis:**
+✅ **Good practices:**
+- SetRow is memoized with React.memo
+- SetList uses useCallback for event handlers
+- WorkoutMode uses useMemo for computed values
+
+⚠️ **Potential issues:**
+- WorkoutMode has many useState calls that could cause cascading re-renders
+- Large workoutProgress arrays re-render entire SetList on any progress change
+- No virtualization for large exercise lists
+
+**Bundle Size:**
+⚠️ **Concerns:**
+- Large number of Radix UI components imported
+- Multiple icon libraries (lucide-react)
+- Heavy font loading in HTML (many Google Fonts families)
+- No code splitting implemented
+
+**Memory Usage:**
+⚠️ **Issues:**
+- Timer intervals not properly cleaned up in all cases
+- Large localStorage objects loaded into memory simultaneously
+- No cleanup for unused progress data
+
+## Security and secrets
+
+**DeepSeek Integration:**
+❌ **Critical Issue:** No DeepSeek client implementation found in codebase
+❌ **Missing:** AI helper button and modal mentioned in requirements
+❌ **Missing:** Environment variable handling for API keys
+❌ **Missing:** Error handling for API failures
+
+**Data Security:**
+✅ All data stored in localStorage (client-side only)
+✅ No sensitive data logged in console.log statements
+⚠️ **Concern:** No data validation on localStorage reads (could crash on corrupted data)
+
+**Error Handling:**
+⚠️ **Issues:**
+- Basic try/catch blocks but no user-friendly error messages
+- No retry mechanisms for failed operations
+- CSV import errors shown as alerts, not proper UI feedback
+
+## CSV importer
+
+**Import Functionality:**
+✅ **Working systems:**
+- TrainingCSV parser handles proper CSV format with 9 columns
+- Legacy CSV parser exists for backward compatibility
+- Both parsers convert to SessionTemplate format
+
+**UI Placement:**
+❌ **Major Issue:** Multiple CSV import entry points violate requirements:
+- Sessions page has "Import Training CSV" and "Import Legacy CSV" buttons in header
+- Home page is dedicated import interface
+- **Requirement violation:** Should be single inline action in My Workouts only
+
+**Validation:**
+✅ Proper column validation and error reporting
+✅ Row-by-row parsing with error collection
+⚠️ File size limits not implemented
+
+**Data Mapping:**
+✅ Comprehensive mapping from CSV to SessionExercise schema
+✅ Intelligent parsing of reps/time/steps formats
+✅ Automatic rest time calculation based on muscle groups
+
+## Testing
+
+**Current State:**
+❌ **No test files found** - Critical gap for production readiness
+
+**Layout Testing Needs:**
+- iPhone 16 Pro viewport testing for 7-region layout
+- Keyboard open/close behavior testing
+- Safe area inset validation
+
+**Interaction Testing Requirements:**
+- SetRow edit flow with numeric keypad
+- Modal focus management and return
+- Timer state persistence across navigation
+
+**Suggested Test Framework:**
+- Playwright for E2E testing (as mentioned in requirements)
+- Component testing for SetRow, SetList interaction flows
+- Visual regression testing for glass morphism layouts
+
+## Risk map
+
+| Risk | Severity | Blast Radius | Effort | Files |
+|------|----------|--------------|--------|--------|
+| Missing DeepSeek AI integration | HIGH | Entire workout experience | HIGH | `client/src/pages/WorkoutMode.tsx`, new AI components |
+| Multiple CSV import UIs | HIGH | Navigation/UX consistency | MEDIUM | `client/src/pages/Sessions.tsx`, `client/src/components/Layout.tsx` |
+| No testing framework | HIGH | Code quality/reliability | HIGH | Entire codebase |
+| Accessibility violations | MEDIUM | User experience | MEDIUM | `client/src/components/SetRow.tsx`, `client/src/components/SetList.tsx` |
+| Performance re-render issues | MEDIUM | Workout mode responsiveness | MEDIUM | `client/src/pages/WorkoutMode.tsx`, `client/src/components/SetList.tsx` |
+| Focus management gaps | MEDIUM | Keyboard navigation | LOW | Modal components throughout |
+| Bundle size optimization | LOW | Initial load time | MEDIUM | Build configuration, imports |
+| Error handling improvements | LOW | User experience | LOW | Utility functions, API calls |
+
+## Fix plan
+
+```
+Title: Remove duplicate CSV import UI elements
+Goal: Ensure only single inline import action exists in My Workouts page
+Files: client/src/pages/Sessions.tsx, client/src/components/Layout.tsx
+Diff sketch: 
+- Remove "Import Training CSV" and "Import Legacy CSV" buttons from Sessions header
+- Remove /import route and Import nav item from Layout
+- Add single inline "Import CSV" action within workout templates list
+- Consolidate both parsers behind single import flow
+Tests: Verify no import buttons in header, single import action in template list
+Acceptance: Navigation shows only My Workouts and Calendar, import is inline action with compact summary
+Rollback: Restore header buttons and import route if import functionality breaks
+```
+
+```
+Title: Implement missing DeepSeek AI integration
+Goal: Add AI helper button and modal with Suggestions and Quick Edits tabs
+Files: client/src/pages/WorkoutMode.tsx, client/src/components/AIHelperModal.tsx (new)
+Diff sketch:
+- Add AI button to right side of exercise title bar
+- Create modal with tabs for Suggestions and Quick Edits
+- Add environment variable handling for DeepSeek API key
+- Implement strict JSON response parsing
+- Add focus return management on modal close
+Tests: AI button visible, modal opens/closes, focus returns, no secrets in logs
+Acceptance: AI button in title bar, modal with tabs, strict JSON parsing, proper focus management
+Rollback: Hide AI button if API integration fails, maintain workout functionality
+```
+
+```
+Title: Fix SetList height calculation for keyboard visibility
+Goal: Ensure primary actions stay visible when keyboard opens
+Files: client/src/components/SetList.tsx, client/src/index.css
+Diff sketch:
+- Replace fixed max-h-[48dvh] with calculated height based on available space
+- Implement proper keyboard detection and height adjustment
+- Add scroll-into-view for current set when keyboard opens
+Tests: Verify Complete button always visible with keyboard open on iPhone 16 Pro
+Acceptance: All regions visible without scroll in normal use, primary actions accessible with keyboard
+Rollback: Revert to fixed heights if calculation causes layout instability
+```
+
+```
+Title: Improve accessibility with proper focus management
+Goal: Ensure focus order follows visual order and proper ARIA labels
+Files: client/src/components/SetRow.tsx, client/src/components/SetList.tsx
+Diff sketch:
+- Add focus return to trigger element on modal close
+- Implement visible focus rings on glass components
+- Add aria-live regions for timer updates
+- Ensure 44px minimum hit targets for all interactive elements
+Tests: Tab navigation follows visual order, screen reader announces updates
+Acceptance: All controls have labels, hit targets 44x44px, focus rings visible
+Rollback: Remove focus management if it interferes with existing interactions
+```
+
+```
+Title: Add basic testing framework setup
+Goal: Establish Playwright testing for layout and interaction flows
+Files: package.json, tests/ (new directory), playwright.config.ts (new)
+Diff sketch:
+- Install Playwright and configure for mobile testing
+- Add tests for iPhone 16 Pro workout mode layout
+- Test SetRow edit flow and modal interactions
+- Add assertions for no-scroll requirement
+Tests: npm run test passes, layout tests verify 7-region order
+Acceptance: Basic test suite covers layout order and edit flows
+Rollback: Remove test dependencies if they conflict with build process
+```
+
+## Open questions
+
+1. **DeepSeek API Integration**: What is the exact API endpoint and authentication method for DeepSeek? What should the AI suggestions and quick edits functionality specifically do?
+
+2. **AI Response Format**: What is the expected JSON schema for DeepSeek responses? Should suggestions modify existing exercises or recommend new ones?
+
+3. **Import CSV Consolidation**: Should the single inline import action support both training CSV and legacy CSV formats, or should we deprecate legacy format?
+
+4. **iPhone 16 Pro Testing**: Do we have access to iPhone 16 Pro devices or simulators for testing the exact viewport requirements?
+
+5. **Keyboard Detection**: What is the preferred method for detecting keyboard open/close on mobile devices for height calculations?
+
+6. **Focus Management Strategy**: Should focus management follow standard modal patterns or are there specific UX requirements for the glass morphism interface?
+
+7. **Performance Targets**: Are there specific performance budgets for bundle size, initial load time, or interaction responsiveness?
+
+8. **Error Handling UX**: What should the user experience be for CSV import errors, API failures, and data corruption scenarios?
+
+9. **Migration Strategy**: How should we handle users who have existing data when implementing breaking changes to the storage format?
+
+10. **Testing Environment**: Should tests run against localhost development server or do we need a staging environment for E2E testing?
