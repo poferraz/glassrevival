@@ -106,7 +106,6 @@ export default function WorkoutMode() {
       }
     }
 
-    // Load session data - check both SessionInstance and legacy ScheduledSession
     // Load session data from SessionInstances
     const sessionInstances = loadSessionInstances();
     const instance = sessionInstances.find(s => s.id === sessionId);
