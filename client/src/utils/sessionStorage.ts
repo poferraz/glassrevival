@@ -2,7 +2,6 @@
 import { 
   SessionTemplate, 
   SessionInstance,
-  ScheduledSession, 
   WorkoutProgress, 
   SetProgress,
   SessionExercise,
@@ -15,7 +14,6 @@ import {
 const STORAGE_KEYS = {
   SESSION_TEMPLATES: 'fittracker_session_templates',
   SESSION_INSTANCES: 'fittracker_session_instances',
-  SCHEDULED_SESSIONS: 'fittracker_scheduled_sessions', // Legacy key for migration
   WORKOUT_PROGRESS: 'fittracker_workout_progress',
   ACTIVE_WORKOUT: 'fittracker_active_workout'
 } as const;
@@ -187,98 +185,6 @@ export function createSessionInstanceFromTemplate(template: SessionTemplate, dat
   };
   
   return saveSessionInstance(instanceData);
-}
-
-// Legacy Scheduled Session Management (for backward compatibility)
-export function saveScheduledSession(session: ScheduledSession): void {
-  try {
-    const sessions = loadScheduledSessions();
-    const existingIndex = sessions.findIndex(s => s.id === session.id);
-    
-    if (existingIndex >= 0) {
-      sessions[existingIndex] = session;
-    } else {
-      sessions.push(session);
-    }
-    
-    localStorage.setItem(STORAGE_KEYS.SCHEDULED_SESSIONS, JSON.stringify(sessions));
-    console.log('Scheduled session saved:', session.date);
-  } catch (error) {
-    console.error('Failed to save scheduled session:', error);
-  }
-}
-
-export function loadScheduledSessions(): ScheduledSession[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEYS.SCHEDULED_SESSIONS);
-    return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.error('Failed to load scheduled sessions:', error);
-    return [];
-  }
-}
-
-export function getScheduledSessionsForDate(date: string): ScheduledSession[] {
-  const sessions = loadScheduledSessions();
-  return sessions.filter(s => s.date === date);
-}
-
-export function getScheduledSessionsForDateRange(startDate: string, endDate: string): ScheduledSession[] {
-  const sessions = loadScheduledSessions();
-  return sessions.filter(s => s.date >= startDate && s.date <= endDate);
-}
-
-export function deleteScheduledSession(sessionId: string): void {
-  try {
-    const sessions = loadScheduledSessions();
-    const filtered = sessions.filter(s => s.id !== sessionId);
-    localStorage.setItem(STORAGE_KEYS.SCHEDULED_SESSIONS, JSON.stringify(filtered));
-    console.log('Scheduled session deleted:', sessionId);
-  } catch (error) {
-    console.error('Failed to delete scheduled session:', error);
-  }
-}
-
-// Migration utility to convert legacy ScheduledSessions to SessionInstances
-export function migrateLegacyScheduledSessions(): void {
-  try {
-    const legacySessions = loadScheduledSessions();
-    if (legacySessions.length === 0) return;
-    
-    console.log(`Migrating ${legacySessions.length} legacy scheduled sessions...`);
-    const templates = loadSessionTemplates();
-    
-    legacySessions.forEach(legacySession => {
-      const template = templates.find(t => t.id === legacySession.templateId);
-      if (template) {
-        const instance: SessionInstance = {
-          id: legacySession.id,
-          templateId: legacySession.templateId,
-          templateSnapshot: {
-            name: template.name,
-            description: template.description,
-            exercises: template.exercises,
-            estimatedDurationMinutes: template.estimatedDurationMinutes,
-            tags: template.tags
-          },
-          date: legacySession.date,
-          startTime: legacySession.startTime,
-          status: legacySession.status,
-          scheduledAt: legacySession.completedAt || getCurrentISOString(),
-          completedAt: legacySession.completedAt,
-          notes: legacySession.notes
-        };
-        
-        saveSessionInstance(instance);
-      }
-    });
-    
-    // Clear legacy data after migration
-    localStorage.removeItem(STORAGE_KEYS.SCHEDULED_SESSIONS);
-    console.log('Legacy scheduled sessions migrated successfully');
-  } catch (error) {
-    console.error('Failed to migrate legacy scheduled sessions:', error);
-  }
 }
 
 // Workout Progress Management
@@ -552,12 +458,4 @@ export function addDays(dateString: string, days: number): string {
   const date = parseLocalDate(dateString);
   date.setDate(date.getDate() + days);
   return formatLocalDate(date);
-}
-
-// Initialize and run migrations on first load
-if (typeof window !== 'undefined') {
-  // Run migration on module load
-  setTimeout(() => {
-    migrateLegacyScheduledSessions();
-  }, 100);
 }

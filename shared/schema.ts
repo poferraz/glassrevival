@@ -67,17 +67,6 @@ export interface SessionInstance {
   notes?: string;
 }
 
-// Legacy type for backward compatibility
-export interface ScheduledSession {
-  id: string;
-  templateId: string;
-  date: string; // ISO date string (YYYY-MM-DD)
-  startTime?: string; // Optional start time (HH:MM)
-  status: 'scheduled' | 'in_progress' | 'completed' | 'skipped';
-  completedAt?: string;
-  notes?: string;
-}
-
 export interface WorkoutProgress {
   sessionId: string;
   exerciseId: string;

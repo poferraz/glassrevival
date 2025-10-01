@@ -1,13 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRoute, useLocation } from "wouter";
-import { SessionExercise, WorkoutProgress, SetProgress, SessionInstance, ScheduledSession } from "@shared/schema";
+import { SessionExercise, WorkoutProgress, SetProgress, SessionInstance } from "@shared/schema";
 import { 
   getSessionTemplate,
-  getScheduledSessionsForDate,
   loadSessionInstances,
-  loadScheduledSessions,
   saveSessionInstance,
-  saveScheduledSession,
   saveWorkoutProgress,
   getWorkoutProgress,
   getExerciseProgress,
@@ -68,7 +65,7 @@ export default function WorkoutMode() {
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [sessionInstance, setSessionInstance] = useState<SessionInstance | ScheduledSession | null>(null);
+  const [sessionInstance, setSessionInstance] = useState<SessionInstance | null>(null);
   const [sessionNotFound, setSessionNotFound] = useState(false);
   const [showFormGuidance, setShowFormGuidance] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
@@ -110,38 +107,18 @@ export default function WorkoutMode() {
     }
 
     // Load session data - check both SessionInstance and legacy ScheduledSession
-    let foundSession: SessionInstance | ScheduledSession | null = null;
-    let sessionExercises: SessionExercise[] = [];
-    
-    // First, try to find in SessionInstances
+    // Load session data from SessionInstances
     const sessionInstances = loadSessionInstances();
     const instance = sessionInstances.find(s => s.id === sessionId);
     
     if (instance) {
-      foundSession = instance;
-      sessionExercises = instance.templateSnapshot.exercises;
-    } else {
-      // Fall back to legacy ScheduledSessions
-      const scheduledSessions = loadScheduledSessions();
-      const legacySession = scheduledSessions.find(s => s.id === sessionId);
-      
-      if (legacySession) {
-        foundSession = legacySession;
-        const template = getSessionTemplate(legacySession.templateId);
-        if (template) {
-          sessionExercises = template.exercises;
-        }
-      }
-    }
-    
-    if (foundSession && sessionExercises.length > 0) {
-      setSessionInstance(foundSession);
-      setExercises(sessionExercises);
+      setSessionInstance(instance);
+      setExercises(instance.templateSnapshot.exercises);
       setWorkoutProgress(getWorkoutProgress(sessionId));
       setSessionNotFound(false);
       
       // Update session status to in_progress when first loaded
-      if (foundSession.status === 'scheduled') {
+      if (instance.status === 'scheduled') {
         updateSessionStatus('in_progress');
       }
     } else {
@@ -353,15 +330,6 @@ export default function WorkoutMode() {
         };
         saveSessionInstance(updatedInstance);
         setSessionInstance(updatedInstance);
-      } else {
-        // Legacy ScheduledSession
-        const updatedSession: ScheduledSession = {
-          ...sessionInstance,
-          status,
-          completedAt: status === 'completed' ? new Date().toISOString() : sessionInstance.completedAt
-        };
-        saveScheduledSession(updatedSession);
-        setSessionInstance(updatedSession);
       }
       
       console.log(`Session status updated to: ${status}`);

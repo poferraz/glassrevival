@@ -1,16 +1,14 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { SessionTemplate, SessionInstance, ScheduledSession } from "@shared/schema";
+import { SessionTemplate, SessionInstance } from "@shared/schema";
 import { 
   loadSessionTemplates, 
   loadSessionInstances,
   getSessionInstancesForDate,
-  loadScheduledSessions, 
-  getScheduledSessionsForDate,
   formatDate,
   getTodayString,
   createSessionInstanceFromTemplate,
-  migrateLegacyScheduledSessions
+  getSessionTemplate
 } from "@/utils/sessionStorage";
 import { calculateSessionProgress } from "@/utils/workoutHelpers";
 import GlassCard from "@/components/GlassCard";
@@ -38,62 +36,37 @@ export default function Calendar() {
   const [selectedDateString, setSelectedDateString] = useState<string>(getTodayString());
   const [sessionTemplates, setSessionTemplates] = useState<SessionTemplate[]>([]);
   const [sessionInstances, setSessionInstances] = useState<SessionInstance[]>([]);
-  const [scheduledSessions, setScheduledSessions] = useState<ScheduledSession[]>([]);
   const [selectedDateSessions, setSelectedDateSessions] = useState<CombinedSession[]>([]);
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
 
   useEffect(() => {
-    // Migrate legacy data first
-    migrateLegacyScheduledSessions();
-    
-    // Load data
     loadData();
   }, []);
 
   const loadData = () => {
     setSessionTemplates(loadSessionTemplates());
     setSessionInstances(loadSessionInstances());
-    setScheduledSessions(loadScheduledSessions());
   };
 
-
   useEffect(() => {
-    // Update selected date sessions - combine SessionInstance and ScheduledSession
+    // Update selected date sessions from SessionInstances
     const instances = getSessionInstancesForDate(selectedDateString);
-    const legacySessions = getScheduledSessionsForDate(selectedDateString);
     
-    const combinedSessions: CombinedSession[] = [
-      ...instances.map(instance => ({
-        id: instance.id,
-        templateId: instance.templateId,
-        date: instance.date,
-        startTime: instance.startTime,
-        status: instance.status,
-        completedAt: instance.completedAt,
-        notes: instance.notes,
-        name: instance.templateSnapshot.name,
-        exercises: instance.templateSnapshot.exercises,
-        estimatedDurationMinutes: instance.templateSnapshot.estimatedDurationMinutes
-      })),
-      ...legacySessions.map(session => {
-        const template = getSessionTemplate(session.templateId);
-        return {
-          id: session.id,
-          templateId: session.templateId,
-          date: session.date,
-          startTime: session.startTime,
-          status: session.status,
-          completedAt: session.completedAt,
-          notes: session.notes,
-          name: template?.name,
-          exercises: template?.exercises,
-          estimatedDurationMinutes: template?.estimatedDurationMinutes
-        };
-      })
-    ];
+    const combinedSessions: CombinedSession[] = instances.map(instance => ({
+      id: instance.id,
+      templateId: instance.templateId,
+      date: instance.date,
+      startTime: instance.startTime,
+      status: instance.status,
+      completedAt: instance.completedAt,
+      notes: instance.notes,
+      name: instance.templateSnapshot.name,
+      exercises: instance.templateSnapshot.exercises,
+      estimatedDurationMinutes: instance.templateSnapshot.estimatedDurationMinutes
+    }));
     
     setSelectedDateSessions(combinedSessions);
-  }, [selectedDateString, sessionInstances, scheduledSessions, sessionTemplates]);
+  }, [selectedDateString, sessionInstances, sessionTemplates]);
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
@@ -108,7 +81,7 @@ export default function Calendar() {
     navigate(`/workout/${sessionId}`);
   };
 
-  const getSessionStatusIcon = (session: ScheduledSession) => {
+  const getSessionStatusIcon = (session: CombinedSession) => {
     switch (session.status) {
       case 'completed':
         return <CheckCircle className="w-3 h-3 text-green-400" />;
