@@ -88,7 +88,8 @@ export default function CSVUpload({
             Import Workout Data
           </h3>
           <p className="text-white/75 text-sm">
-            Upload your "TREINO SETEMBRO .csv" file to parse workout sessions
+            Upload your .CSV file below. Make sure the headers appear in this exact order:<br/>
+            <span className="text-xs italic text-white/60">Day, Exercise, Sets, Reps/Time, Weight, Notes, Form Guidance, Muscle Group, Main Muscle</span>
           </p>
         </div>
 

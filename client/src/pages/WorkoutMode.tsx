@@ -25,8 +25,10 @@ import {
   createEmptySetProgress,
   createEmptyWorkoutProgress
 } from "@/utils/workoutHelpers";
+import { isAIConfigured, type AISuggestion } from "@/utils/deepseekApi";
 import GlassCard from "@/components/GlassCard";
 import SetList from "@/components/SetList";
+import AIHelperModal from "@/components/AIHelperModal";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
@@ -44,7 +46,8 @@ import {
   ChevronRight,
   ChevronDown,
   Plus,
-  Minus
+  Minus,
+  Sparkles
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -69,6 +72,7 @@ export default function WorkoutMode() {
   const [sessionNotFound, setSessionNotFound] = useState(false);
   const [showFormGuidance, setShowFormGuidance] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
   
   // Handler for progress updates from SetList
   const handleProgressUpdate = useCallback((updatedProgress: WorkoutProgress[]) => {
@@ -380,6 +384,103 @@ export default function WorkoutMode() {
     navigate('/');
   };
 
+  // AI Helper functions
+  const handleOpenAIModal = () => {
+    setShowAIModal(true);
+  };
+
+  const handleCloseAIModal = () => {
+    setShowAIModal(false);
+  };
+
+  const handleApplyQuickEdit = useCallback((edits: Partial<SessionExercise>) => {
+    if (!sessionInstance || !currentExercise) return;
+    
+    // Update the current exercise in the session instance
+    const updatedExercises = exercises.map(exercise => 
+      exercise.id === currentExercise.id 
+        ? { ...exercise, ...edits }
+        : exercise
+    );
+    
+    setExercises(updatedExercises);
+    
+    // Update the session instance with the modified exercise
+    if ('templateSnapshot' in sessionInstance) {
+      const updatedInstance: SessionInstance = {
+        ...sessionInstance,
+        templateSnapshot: {
+          ...sessionInstance.templateSnapshot,
+          exercises: updatedExercises
+        }
+      };
+      saveSessionInstance(updatedInstance);
+      setSessionInstance(updatedInstance);
+    }
+    
+    console.log('Applied AI quick edit to exercise:', currentExercise.name, edits);
+  }, [sessionInstance, currentExercise, exercises]);
+
+  const handleApplySuggestion = useCallback((suggestion: AISuggestion) => {
+    if (!sessionInstance || !currentExercise) return;
+    
+    // Parse the suggestion reps format
+    let repsMin: number | undefined;
+    let repsMax: number | undefined;
+    let timeSecondsMin: number | undefined;
+    let timeSecondsMax: number | undefined;
+    
+    // Simple parsing for common formats
+    const repsStr = suggestion.reps.toLowerCase();
+    if (repsStr.includes('-')) {
+      const [min, max] = repsStr.split('-').map(s => parseInt(s.trim()));
+      repsMin = min;
+      repsMax = max;
+    } else if (repsStr.includes('s')) {
+      const seconds = parseInt(repsStr.replace('s', ''));
+      timeSecondsMin = seconds;
+      timeSecondsMax = seconds;
+    } else {
+      const reps = parseInt(repsStr);
+      repsMin = reps;
+      repsMax = reps;
+    }
+    
+    // Create updated exercise based on suggestion
+    const updatedExercise: SessionExercise = {
+      ...currentExercise,
+      name: suggestion.name,
+      sets: suggestion.sets,
+      repsMin,
+      repsMax,
+      timeSecondsMin,
+      timeSecondsMax,
+      formGuidance: suggestion.formGuidance || currentExercise.formGuidance
+    };
+    
+    // Update exercises array
+    const updatedExercises = exercises.map(exercise => 
+      exercise.id === currentExercise.id ? updatedExercise : exercise
+    );
+    
+    setExercises(updatedExercises);
+    
+    // Update the session instance
+    if ('templateSnapshot' in sessionInstance) {
+      const updatedInstance: SessionInstance = {
+        ...sessionInstance,
+        templateSnapshot: {
+          ...sessionInstance.templateSnapshot,
+          exercises: updatedExercises
+        }
+      };
+      saveSessionInstance(updatedInstance);
+      setSessionInstance(updatedInstance);
+    }
+    
+    console.log('Applied AI suggestion:', suggestion.name);
+  }, [sessionInstance, currentExercise, exercises]);
+
   if (!sessionId) {
     return (
       <div className="flex flex-col h-dvh min-h-0 bg-background items-center justify-center px-4">
@@ -428,202 +529,71 @@ export default function WorkoutMode() {
   const completedSets = calculateCompletedSets(currentExerciseProgress);
   const overallProgress = Math.round(((currentExerciseIndex + (completedSets / currentExercise.sets)) / exercises.length) * 100);
 
-  // Calculate conditional max-height for Set Progress based on panel state
-  const arePanelsOpen = showFormGuidance || showNotes;
-  const setProgressMaxHeight = arePanelsOpen ? 'max-h-[32dvh]' : 'max-h-[48dvh]';
-
   return (
-    <div className="flex flex-col h-dvh min-h-0 bg-background">
-      {/* 1. Progress Info Region with Exit Button */}
-      <div className="flex-none px-4 pt-safe pb-2" data-testid="progress-info">
-        <div className="flex items-stretch gap-3">
-          {/* Exit Button on left side */}
-          <div className="flex-none self-stretch">
+    <div className="flex flex-col h-screen max-h-screen overflow-hidden">
+        {/* Compact Header with Exit, Progress, and AI */}
+        <div className="flex-none px-3 pt-safe pb-1" data-testid="header">
+          <div className="flex items-center gap-2">
+            {/* Exit Button */}
             <GlassCard 
               variant="secondary" 
               onClick={exitWorkout}
-              className="w-12 h-full flex items-center justify-center cursor-pointer bg-destructive/20 border-destructive/40 text-destructive-foreground backdrop-blur-md"
+              className="w-10 h-10 flex items-center justify-center cursor-pointer bg-red-500/20 border-red-500/40 text-red-400"
               data-testid="button-exit-workout"
             >
-              <ChevronLeft 
-                className="w-5 h-5" 
-              />
+              <ChevronLeft className="w-4 h-4" />
             </GlassCard>
-          </div>
-          
-          {/* Progress box taking remaining space */}
-          <div className="flex-1">
-            <GlassCard variant="secondary" className="p-3">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm text-white/80">
-                  Exercise {currentExerciseIndex + 1} of {exercises.length}
+            
+            {/* Progress */}
+            <div className="flex-1">
+              <GlassCard variant="secondary" className="p-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-white/80">
+                    {currentExerciseIndex + 1}/{exercises.length}
+                  </div>
+                  <div className="text-sm font-bold text-white">{overallProgress}%</div>
                 </div>
-                <div className="text-right">
-                  <div className="text-xs text-white/60">Progress</div>
-                  <div className="text-lg font-bold text-white">{overallProgress}%</div>
+                <div className="w-full bg-white/20 rounded-full h-1 mt-1">
+                  <div 
+                    className="bg-primary h-1 rounded-full transition-all duration-300"
+                    style={{ width: `${overallProgress}%` }}
+                  />
                 </div>
-              </div>
-              {/* Compact Progress Bar */}
-              <div className="w-full bg-white/20 rounded-full h-1.5">
-                <div 
-                  className="bg-primary h-1.5 rounded-full transition-all duration-300"
-                  style={{ width: `${overallProgress}%` }}
-                />
-              </div>
-            </GlassCard>
-          </div>
-        </div>
-      </div>
-
-      {/* Middle Content Container - Title + SetList + Panels */}
-      <div className="flex flex-col flex-1 min-h-0">
-        {/* 2. Exercise Title Region */}
-        <div className="flex-none px-4 pb-2" data-testid="exercise-title">
-          <GlassCard variant="primary" className="p-4 text-center">
-            <h2 className="text-xl font-bold text-white mb-1" data-testid="current-exercise-name">
-              {currentExercise.name}
-            </h2>
-            <div className="text-sm text-blue-300">
-              {currentExercise.muscleGroup}
-              {currentExercise.mainMuscle && currentExercise.mainMuscle !== currentExercise.muscleGroup && (
-                <span className="ml-2 text-white/60">
-                  • {currentExercise.mainMuscle}
-                </span>
-              )}
+              </GlassCard>
             </div>
-          </GlassCard>
-        </div>
-
-        {/* 3. Set Progress Box Region */}
-        <div className={`flex-none px-4 pb-2 ${setProgressMaxHeight} overflow-y-auto`} data-testid="set-progress">
-          <div className="h-full">
-            {sessionStarted && currentExercise && sessionId ? (
-              <SetList 
-                sessionId={sessionId}
-                currentExercise={currentExercise}
-                workoutProgress={workoutProgress}
-                onProgressUpdate={(updatedProgress) => setWorkoutProgress(updatedProgress)}
-                isPanelsOpen={showFormGuidance || showNotes}
-              />
-            ) : (
-              <GlassCard variant="tertiary" className="h-full flex items-center justify-center">
-                <div className="text-center p-8">
-                  <h3 className="text-lg font-semibold text-white mb-2">
-                    Ready to Start?
-                  </h3>
-                  <p className="text-white/60 text-sm">
-                    Set tracking will appear here once you begin your workout.
-                  </p>
-                </div>
+            
+            {/* AI Button */}
+            {isAIConfigured() && (
+              <GlassCard 
+                variant="secondary" 
+                onClick={handleOpenAIModal}
+                className="w-10 h-10 flex items-center justify-center cursor-pointer bg-blue-500/20 border-blue-500/40 text-blue-400"
+                data-testid="button-ai-helper"
+              >
+                <Sparkles className="w-4 h-4" />
               </GlassCard>
             )}
           </div>
         </div>
 
-        {/* 4. Collapsed Panels Region */}
-        {(currentExercise.formGuidance || currentExercise.notes) && (
-          <div className="flex-none px-4 pb-2" data-testid="panels">
-            <div className="space-y-2">
-              {currentExercise.formGuidance && (
-                <Collapsible open={showFormGuidance} onOpenChange={setShowFormGuidance}>
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-between text-white border-white/20 hover:bg-white/10"
-                      data-testid="button-toggle-form-guidance"
-                    >
-                      <span>Form Guidance</span>
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
-                        showFormGuidance ? 'rotate-180' : ''
-                      }`} />
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    <GlassCard variant="tertiary" className="p-3">
-                      <div className="text-sm text-white/80">
-                        {currentExercise.formGuidance}
-                      </div>
-                    </GlassCard>
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
+      {/* Middle Content Container - Title + SetList + Panels */}
+      <div className="flex flex-col flex-1 min-h-0">
+        {/* Compact Exercise Title */}
+        <div className="flex-none px-3 pb-1" data-testid="exercise-title">
+          <GlassCard variant="primary" className="p-3">
+            <div className="text-center">
+              <h2 className="text-lg font-bold text-white mb-1" data-testid="current-exercise-name">
+                {currentExercise.name}
+              </h2>
+              <div className="text-xs text-blue-300 mb-2">
+                {currentExercise.muscleGroup}
+                {currentExercise.mainMuscle && currentExercise.mainMuscle !== currentExercise.muscleGroup && (
+                  <span className="ml-1 text-white/60">• {currentExercise.mainMuscle}</span>
+                )}
+              </div>
               
-              {currentExercise.notes && (
-                <Collapsible open={showNotes} onOpenChange={setShowNotes}>
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-between text-white border-white/20 hover:bg-white/10"
-                      data-testid="button-toggle-notes"
-                    >
-                      <span>Notes</span>
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
-                        showNotes ? 'rotate-180' : ''
-                      }`} />
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    <GlassCard variant="tertiary" className="p-3">
-                      <div className="text-sm text-white/80">
-                        {currentExercise.notes}
-                      </div>
-                    </GlassCard>
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 5. Complete Button Region */}
-      <div className="flex-none px-4 pb-2" data-testid="complete">
-        {!sessionStarted ? (
-          <Button
-            size="lg"
-            variant="default"
-            onClick={startWorkout}
-            className="w-full"
-            data-testid="button-start-workout"
-          >
-            <Play className="w-5 h-5 mr-2" />
-            Start Workout
-          </Button>
-        ) : (
-          <Button
-            size="lg"
-            variant="default"
-            onClick={completeSet}
-            className="w-full"
-            data-testid="button-complete-set"
-          >
-            <CheckCircle className="w-5 h-5 mr-2" />
-            Complete Set {currentSetIndex + 1}
-          </Button>
-        )}
-      </div>
-
-      {/* 6. Navigation Region */}
-      {sessionStarted && (
-        <div className="flex-none px-4 pb-2" data-testid="navigation">
-          <GlassCard variant="secondary" className="p-3">
-            <div className="flex items-center justify-between">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={previousExercise}
-                disabled={currentExerciseIndex === 0}
-                className="text-white border-white/20 hover:bg-white/10"
-                data-testid="button-previous-exercise"
-              >
-                <SkipBack className="w-4 h-4 mr-1" />
-                Prev
-              </Button>
-              
-              {/* Set Status Indicators */}
-              <div className="flex gap-1 items-center">
+              {/* Compact Set Status Indicators */}
+              <div className="flex gap-1 items-center justify-center">
                 {Array.from({ length: currentExercise.sets }, (_, i) => {
                   const setProgress = currentExerciseProgress?.sets.find(s => s.setNumber === i + 1);
                   const isCompleted = setProgress?.completed || false;
@@ -644,118 +614,161 @@ export default function WorkoutMode() {
                     </div>
                   );
                 })}
-                
-                {/* Add Set Button */}
-                {currentExerciseProgress && currentExerciseProgress.sets.length < 12 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleAddSet}
-                    className="w-5 h-5 p-0 rounded-full text-white border-white/20 hover:bg-white/10 hover:border-white/30"
-                    data-testid="button-add-set"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </Button>
-                )}
               </div>
-              
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={nextExercise}
-                disabled={currentExerciseIndex >= exercises.length - 1}
-                className="text-white border-white/20 hover:bg-white/10"
-                data-testid="button-next-exercise"
-              >
-                Next
-                <SkipForward className="w-4 h-4 ml-1" />
-              </Button>
             </div>
           </GlassCard>
         </div>
-      )}
 
-      {/* 7. Timer Box Region - Pinned at Bottom */}
-      {sessionStarted && (
-        <div className="flex-none px-4 pb-safe" data-testid="timer">
-          <GlassCard variant="tertiary" className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-white">Timer</h3>
-              <div className="flex gap-1">
-                <Button
-                  size="sm"
-                  variant={timerType === 'rest' ? 'default' : 'outline'}
-                  onClick={startRestTimer}
-                  className="text-xs px-2 py-1 text-white border-white/20 hover:bg-white/10"
-                  data-testid="button-rest-timer"
-                >
-                  <Timer className="w-3 h-3 mr-1" />
-                  Rest
-                </Button>
-                <Button
-                  size="sm"
-                  variant={timerType === 'stopwatch' ? 'default' : 'outline'}
-                  onClick={startStopwatch}
-                  className="text-xs px-2 py-1 text-white border-white/20 hover:bg-white/10"
-                  data-testid="button-stopwatch"
-                >
-                  <Clock className="w-3 h-3 mr-1" />
-                  Stopwatch
-                </Button>
-              </div>
-            </div>
-
-            {timerType && (
-              <div className="text-center">
-                <div className="text-2xl font-mono font-bold text-white mb-2">
-                  {formatTimerDisplay(timerSeconds)}
+        {/* Compact Set Progress */}
+        <div className="flex-1 px-3 pb-1 min-h-0" data-testid="set-progress">
+          <div className="h-full">
+            {sessionStarted && currentExercise && sessionId ? (
+              <SetList 
+                sessionId={sessionId}
+                currentExercise={currentExercise}
+                workoutProgress={workoutProgress}
+                onProgressUpdate={(updatedProgress) => setWorkoutProgress(updatedProgress)}
+                isPanelsOpen={false}
+                onAddSet={handleAddSet}
+              />
+            ) : (
+              <GlassCard variant="tertiary" className="h-full flex items-center justify-center">
+                <div className="text-center p-6">
+                  <h3 className="text-base font-semibold text-white mb-2">
+                    Ready to Start?
+                  </h3>
+                  <p className="text-white/60 text-sm">
+                    Set tracking will appear here once you begin your workout.
+                  </p>
                 </div>
-                <div className="flex justify-center gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={toggleTimer}
-                    className="text-xs px-2 py-1 text-white border-white/20 hover:bg-white/10"
-                    data-testid="button-toggle-timer"
-                  >
-                    {isTimerRunning ? (
-                      <>
-                        <Pause className="w-3 h-3 mr-1" />
-                        Pause
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-3 h-3 mr-1" />
-                        Start
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={resetTimer}
-                    className="text-xs px-2 py-1 text-white border-white/20 hover:bg-white/10"
-                    data-testid="button-reset-timer"
-                  >
-                    <RotateCcw className="w-3 h-3 mr-1" />
-                    Reset
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={stopTimer}
-                    className="text-xs px-2 py-1 text-white border-white/20 hover:bg-white/10"
-                    data-testid="button-stop-timer"
-                  >
-                    <Square className="w-3 h-3 mr-1" />
-                    Stop
-                  </Button>
-                </div>
-              </div>
+              </GlassCard>
             )}
-          </GlassCard>
+          </div>
         </div>
-      )}
+
+        {/* Compact Action Bar */}
+        <div className="flex-none px-3 pb-1" data-testid="action-bar">
+          <div className="flex gap-2">
+            {!sessionStarted ? (
+              <Button
+                size="lg"
+                variant="default"
+                onClick={startWorkout}
+                className="flex-1"
+                data-testid="button-start-workout"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Start Workout
+              </Button>
+            ) : (
+              <>
+                <Button
+                  size="lg"
+                  variant="default"
+                  onClick={completeSet}
+                  className="flex-1"
+                  data-testid="button-complete-set"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Complete Set {currentSetIndex + 1}
+                </Button>
+                
+                {/* Compact Navigation */}
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={previousExercise}
+                    disabled={currentExerciseIndex === 0}
+                    className="text-white border-white/20 hover:bg-white/10 px-2"
+                    data-testid="button-previous-exercise"
+                  >
+                    <SkipBack className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={nextExercise}
+                    disabled={currentExerciseIndex >= exercises.length - 1}
+                    className="text-white border-white/20 hover:bg-white/10 px-2"
+                    data-testid="button-next-exercise"
+                  >
+                    <SkipForward className="w-3 h-3" />
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+          
+          {/* Compact Timer */}
+          {sessionStarted && (
+            <div className="mt-2">
+              <GlassCard variant="tertiary" className="p-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Timer className="w-4 h-4 text-white/60" />
+                    <span className="text-sm font-semibold text-white">
+                      {formatTimerDisplay(timerSeconds)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setTimerType(timerType === 'rest' ? null : 'rest')}
+                      className={`text-xs px-2 py-1 ${
+                        timerType === 'rest' 
+                          ? 'bg-blue-500/20 border-blue-500/40 text-blue-400' 
+                          : 'text-white border-white/20 hover:bg-white/10'
+                      }`}
+                      data-testid="button-rest-timer"
+                    >
+                      Rest
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setTimerType(timerType === 'stopwatch' ? null : 'stopwatch')}
+                      className={`text-xs px-2 py-1 ${
+                        timerType === 'stopwatch' 
+                          ? 'bg-green-500/20 border-green-500/40 text-green-400' 
+                          : 'text-white border-white/20 hover:bg-white/10'
+                      }`}
+                      data-testid="button-stopwatch"
+                    >
+                      Stopwatch
+                    </Button>
+                    {timerType && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setIsTimerRunning(!isTimerRunning)}
+                        className="text-xs px-2 py-1 text-white border-white/20 hover:bg-white/10"
+                        data-testid="button-timer-toggle"
+                      >
+                        {isTimerRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </GlassCard>
+            </div>
+          )}
+        </div>
+
+        {/* AI Helper Modal */}
+        {currentExercise && (
+          <AIHelperModal
+            isOpen={showAIModal}
+            onClose={handleCloseAIModal}
+            currentExercise={currentExercise}
+            sessionExercises={exercises}
+            onApplyQuickEdit={handleApplyQuickEdit}
+            onApplySuggestion={handleApplySuggestion}
+          />
+        )}
+      </div>
     </div>
   );
 }

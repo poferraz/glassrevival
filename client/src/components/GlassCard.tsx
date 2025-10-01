@@ -16,7 +16,7 @@ export default function GlassCard({
 }: GlassCardProps) {
   const variantClasses = {
     primary: "bg-white/30 dark:bg-white/20 border-white/30 dark:border-white/20",
-    secondary: "bg-white/20 dark:bg-white/15 border-white/20 dark:border-white/15",
+    secondary: "bg-black/20 backdrop-blur-xl border-white/10 rounded-3xl shadow-2xl",
     tertiary: "bg-white/10 dark:bg-white/10 border-white/10 dark:border-white/10"
   };
 

@@ -33,8 +33,11 @@ export default function Layout({ children, className }: LayoutProps) {
 
   return (
     <div className={cn("min-h-screen", darkMode ? "dark" : "")}>
-      {/* Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-blue-600 via-purple-700 to-indigo-800 dark:from-blue-900 dark:via-purple-900 dark:to-indigo-950" />
+      {/* Animated Background */}
+      <div className="fixed inset-0 animated-background" />
+      
+      {/* Purple Overlay */}
+      <div className="fixed inset-0 bg-gradient-to-br from-blue-600/80 via-purple-700/80 to-indigo-800/80 dark:from-blue-900/80 dark:via-purple-900/80 dark:to-indigo-950/80" />
       
       {/* Content Container */}
       <div className="relative z-10">
@@ -43,15 +46,6 @@ export default function Layout({ children, className }: LayoutProps) {
           <GlassCard variant="secondary" className="px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="md:hidden text-white hover:text-white"
-                  data-testid="menu-button"
-                >
-                  <Menu className="w-5 h-5" />
-                </Button>
                 <h1 className="text-xl font-bold text-white" data-testid="app-title">
                   FitTracker
                 </h1>
@@ -76,27 +70,16 @@ export default function Layout({ children, className }: LayoutProps) {
                     </Link>
                   ))}
                 </div>
-
+                
+                {/* Mobile Menu Button */}
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={toggleDarkMode}
-                  className="text-white hover:text-white"
-                  data-testid="theme-toggle"
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="md:hidden text-white hover:text-white"
+                  data-testid="menu-button"
                 >
-                  {darkMode ? (
-                    <Sun className="w-5 h-5" />
-                  ) : (
-                    <Moon className="w-5 h-5" />
-                  )}
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-white hover:text-white"
-                  data-testid="user-menu"
-                >
-                  <User className="w-5 h-5" />
+                  <Menu className="w-5 h-5" />
                 </Button>
               </div>
             </div>
@@ -106,50 +89,35 @@ export default function Layout({ children, className }: LayoutProps) {
         {/* Mobile Menu */}
         {showMenu && (
           <div className="fixed inset-x-4 top-20 z-40 md:hidden animate-slide-up">
-            <GlassCard variant="primary">
-              <div className="p-4 space-y-3">
-                <Link href="/sessions">
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-white hover:text-white"
-                    onClick={() => setShowMenu(false)}
-                    data-testid="nav-workouts"
-                  >
-                    <LibraryBig className="w-4 h-4 mr-2" />
-                    My Workouts
-                  </Button>
-                </Link>
-                <Link href="/import">
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-white hover:text-white"
-                    onClick={() => setShowMenu(false)}
-                    data-testid="nav-import"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Import CSV
-                  </Button>
-                </Link>
-                <Link href="/">
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-white hover:text-white"
-                    onClick={() => setShowMenu(false)}
-                    data-testid="nav-calendar"
-                  >
-                    <Calendar className="w-4 h-4 mr-2" />
+            <div className="bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl px-4 py-3">
+              <div className="flex justify-center space-x-3">
+                <Link href="/" onClick={() => setShowMenu(false)}>
+                  <div className="flex items-center text-white hover:text-white/80 transition-colors text-sm" data-testid="nav-calendar">
+                    <Calendar className="w-3 h-3 mr-1" />
                     Calendar
-                  </Button>
+                  </div>
+                </Link>
+                <Link href="/sessions" onClick={() => setShowMenu(false)}>
+                  <div className="flex items-center text-white hover:text-white/80 transition-colors text-sm" data-testid="nav-sessions">
+                    <LibraryBig className="w-3 h-3 mr-1" />
+                    Sessions
+                  </div>
+                </Link>
+                <Link href="/import" onClick={() => setShowMenu(false)}>
+                  <div className="flex items-center text-white hover:text-white/80 transition-colors text-sm" data-testid="nav-import">
+                    <Upload className="w-3 h-3 mr-1" />
+                    Import
+                  </div>
                 </Link>
               </div>
-            </GlassCard>
+            </div>
           </div>
         )}
 
         {/* Main Content */}
         <main 
           className={cn(
-            "container mx-auto px-4 py-6 pb-20",
+            "container mx-auto px-4 py-6 pb-20 min-h-screen",
             "safe-area-inset-top safe-area-inset-bottom",
             className
           )}

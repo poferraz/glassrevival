@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from "react";
 import { SetRow } from "./SetRow";
+import GlassCard from "./GlassCard";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import GlassCard from "./GlassCard";
 import { SessionExercise, WorkoutProgress, SetProgress } from "@shared/schema";
 import { saveWorkoutProgress } from "@/utils/sessionStorage";
 import { createEmptySetProgress, createEmptyWorkoutProgress } from "@/utils/workoutHelpers";
@@ -13,6 +13,7 @@ interface SetListProps {
   workoutProgress: WorkoutProgress[];
   onProgressUpdate: (updatedProgress: WorkoutProgress[]) => void;
   isPanelsOpen?: boolean;
+  onAddSet?: () => void;
 }
 
 export default function SetList({ 
@@ -20,7 +21,8 @@ export default function SetList({
   currentExercise, 
   workoutProgress, 
   onProgressUpdate,
-  isPanelsOpen = false
+  isPanelsOpen = false,
+  onAddSet
 }: SetListProps) {
   // Get current exercise progress or create empty one
   const currentExerciseProgress = useMemo(() => {
@@ -155,42 +157,29 @@ export default function SetList({
     updateProgress(updatedProgress);
   }, [currentExerciseProgress, sets.length, updateProgress]);
 
-  const handleAddSet = useCallback(() => {
-    let updatedProgress = { ...currentExerciseProgress, sets: [...currentExerciseProgress.sets] };
-    
-    // Create new set with default values
-    const newSetNumber = sets.length + 1;
-    const newSet = createEmptySetProgress(newSetNumber);
-    
-    // Set default values based on exercise type
-    if (currentExercise.unit === 'reps') {
-      newSet.reps = currentExercise.repsMin || 8;
-    } else if (currentExercise.unit === 'seconds') {
-      newSet.timeSeconds = currentExercise.timeSecondsMin || 30;
-    } else if (currentExercise.unit === 'steps') {
-      newSet.steps = currentExercise.stepsCount || 10;
-    }
-    
-    if (currentExercise.weight && currentExercise.weight > 0) {
-      newSet.weight = currentExercise.weight;
-    }
-    
-    updatedProgress.sets.push(newSet);
-    updateProgress(updatedProgress);
-  }, [currentExerciseProgress, sets.length, currentExercise, updateProgress]);
-
-  // Apply conditional max-height based on panel state
-  const containerMaxHeight = isPanelsOpen ? 'max-h-[32dvh]' : 'max-h-[48dvh]';
 
   return (
-    <GlassCard variant="tertiary" className="overflow-hidden">
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-white mb-4 text-center">
-          Set Progress
-        </h3>
+    <GlassCard variant="tertiary" className="overflow-hidden h-full">
+      <div className="p-4 h-full flex flex-col">
+        <div className="flex items-center justify-between mb-4 flex-none">
+          <h3 className="text-lg font-semibold text-white">
+            Set Progress
+          </h3>
+          {onAddSet && currentExerciseProgress && currentExerciseProgress.sets.length < 12 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onAddSet}
+              className="w-6 h-6 p-0 rounded-full text-white border-white/20 hover:bg-white/10 hover:border-white/30"
+              data-testid="button-add-set"
+            >
+              <Plus className="w-3 h-3" />
+            </Button>
+          )}
+        </div>
         
         {/* Sets Container - Scrollable list with height constraints */}
-        <div className={`set-list-container divide-y divide-white/10 mb-4 overflow-y-auto ${containerMaxHeight}`}>
+        <div className={`set-list-container divide-y divide-white/10 mb-4 overflow-y-auto flex-1 min-h-0`}>
           {sets.map((set) => {
             const displayValue = currentExercise.unit === 'reps' ? 
               (set.setProgress.reps ?? set.defaultReps) :
@@ -215,23 +204,6 @@ export default function SetList({
           })}
         </div>
 
-        {/* Add Set Button */}
-        <Button
-          onClick={handleAddSet}
-          variant="outline"
-          className="w-full text-white border-white/20 hover:bg-white/10"
-          data-testid="button-add-set"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Set
-        </Button>
-        
-        {/* Template info */}
-        {sets.length !== currentExercise.sets && (
-          <div className="text-center text-white/60 text-xs mt-2">
-            Template: {currentExercise.sets} sets, Current: {sets.length} sets
-          </div>
-        )}
       </div>
     </GlassCard>
   );
