@@ -8,7 +8,7 @@ export interface AISuggestion {
 
 export const isAIConfigured = (): boolean => {
   // Check if API key is configured
-  const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
+  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
   return !!apiKey && apiKey.trim() !== '';
 };
 
@@ -21,15 +21,18 @@ export const generateAISuggestion = async (
   }
 
   try {
-    const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+    const model = import.meta.env.VITE_AI_MODEL || 'x-ai/grok-4-fast:free';
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://glassrevive.app',
+        'X-Title': 'GlassRevive Workout Tracker',
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: model,
         messages: [
           {
             role: 'system',

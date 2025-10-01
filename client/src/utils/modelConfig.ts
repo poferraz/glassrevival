@@ -9,6 +9,13 @@ export type LLMModel = {
 
 export const AVAILABLE_MODELS: LLMModel[] = [
   {
+    id: 'x-ai/grok-4-fast:free',
+    name: 'Grok 4 Fast (Free)',
+    description: 'Fast and capable Grok model from xAI',
+    provider: 'openrouter',
+    free: true,
+  },
+  {
     id: 'gpt-4o-mini',
     name: 'GPT-4o Mini',
     description: 'Fast general-purpose model',
