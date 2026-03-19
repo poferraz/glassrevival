@@ -1,4 +1,4 @@
-# Glassrevival
+# glassrevival
 
 <p align="center">
   <strong>Full-stack fitness tracker with AI integration</strong>
