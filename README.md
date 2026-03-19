@@ -1,64 +1,137 @@
-# glassrevival
+# Glassrevival
 
-A full-stack fitness tracking application with AI integration. Built as a React/TypeScript SPA with Express backend, PostgreSQL database via Drizzle ORM, and authentication.
+<p align="center">
+  <strong>Full-stack fitness tracker with AI integration</strong>
+</p>
 
-## Tech Stack
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#tech-stack">Tech Stack</a>
+</p>
 
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui components
-- **Backend:** Express.js, Node.js
-- **Database:** PostgreSQL (Neon), Drizzle ORM
-- **Authentication:** Passport.js (local strategy), express-session
-- **AI Integration:** OpenRouter API (configurable models)
-- **UI Components:** Radix UI primitives, Framer Motion, Recharts
+---
 
-## Getting Started
+## 📱 About
+
+Full-stack fitness tracker with AI integration. Built with modern web technologies for a fast, responsive experience.
+
+
+## ✨ Features
+
+### 🎯 Core Functionality
+
+| Feature | Description |
+|---------|-------------|
+| **Workout Tracking** | Log exercises, sets, and reps |
+| **CSV Import** | Import training plans from spreadsheets |
+| **Calendar View** | Schedule and plan workouts |
+| **Progress Tracking** | Monitor fitness goals over time |
+| **Offline Support** | Use without internet connection |
+
+
+## 📦 Installation
 
 ### Prerequisites
 
-- Node.js
 - PostgreSQL database
 
-### Installation
+### Local Development
 
 ```bash
+# Clone the repository
+git clone https://github.com/poferraz/glassrevival.git
+cd glassrevival
+
+# Install dependencies
 npm install
+
+# Start development server
+npm run dev
 ```
 
-### Environment Variables
+### Build for Production
+
+```bash
+# Create optimized build
+npm run build
+```
+
+## 🔐 Environment Variables
 
 Copy `.env.example` to `.env` and configure:
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_OPENROUTER_API_KEY` | OpenRouter API key from https://openrouter.ai/ |
-| `VITE_AI_MODEL` | AI model selection (default: x-ai/grok-4-fast:free) |
-
-### Running
-
 ```bash
-npm run dev       # Development server
-npm run build     # Production build
-npm run start     # Production server
+cp .env.example .env
 ```
 
-### Database
+### Required Variables
 
-```bash
-npm run db:push   # Push schema changes to database
-```
+- `VITE_OPENROUTER_API_KEY`
+- `VITE_AI_MODEL`
 
-## Project Structure
+## 🛠️ Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| **React** | UI framework |
+| **TypeScript** | Type safety |
+| **Tailwind CSS** | Styling |
+| **Vite** | Build tool |
+| **Express.js** | Backend framework |
+| **Drizzle ORM** | Database |
+
+
+## 🗂️ Project Structure
 
 ```
 glassrevival/
-├── client/         # React frontend source
-├── server/         # Express backend
-├── shared/         # Shared types and schemas
-├── attached_assets/# Static assets
-├── docs/           # Documentation
-└── components.json # shadcn/ui configuration
+├── LICENSE/
+├── server/
+├── shared/
+├── docs/
+├── tailwind.config.ts/
+├── package-lock.json/
+├── package.json/
+├── components.json/
+├── tsconfig.json/
+├── drizzle.config.ts/
 ```
 
-## License
 
-MIT License
+## 📝 Usage
+
+1. Clone the repository
+2. Install dependencies
+3. Run the development server
+4. Open in your browser
+
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Build fails:**
+```bash
+# Clear cache and reinstall
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+```
+
+**Development server won't start:**
+- Check that all environment variables are set
+- Verify Node.js version (18+ required)
+
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+
+---
+
+<p align="center">
+  Built with ❤️ by <a href="https://github.com/poferraz">poferraz</a>
+</p>
